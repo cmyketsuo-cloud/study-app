@@ -2830,11 +2830,15 @@ function handleTypingInput(inputChar) {
     typingCurrentCombo++;
     if (typingCurrentCombo > typingMaxCombo) typingMaxCombo = typingCurrentCombo;
 
-    document.getElementById('typing-combo-num').textContent = typingCurrentCombo;
+    const comboEl = document.getElementById('typing-combo-num');
+    if (comboEl) comboEl.textContent = typingCurrentCombo;
+    const comboBadge = document.getElementById('typing-combo-badge');
+    if (comboBadge) comboBadge.style.display = typingCurrentCombo >= 3 ? 'inline-flex' : 'none';
 
     // リアクションセリフ
-    if (typingCurrentCombo % 5 === 0) {
-      document.getElementById('typing-speech-bubble').textContent = world.sounds.streak;
+    const speechEl = document.getElementById('typing-speech-bubble');
+    if (speechEl && typingCurrentCombo % 5 === 0) {
+      speechEl.textContent = world.sounds.streak;
     }
 
     // ノード（かな1単位）完了判定
@@ -2856,8 +2860,13 @@ function handleTypingInput(inputChar) {
     SoundFx.playWrong();
     typingMissCount++;
     typingCurrentCombo = 0;
-    document.getElementById('typing-combo-num').textContent = '0';
-    document.getElementById('typing-speech-bubble').textContent = 'おしい！もういちど！';
+    const comboEl = document.getElementById('typing-combo-num');
+    if (comboEl) comboEl.textContent = '0';
+    const comboBadge = document.getElementById('typing-combo-badge');
+    if (comboBadge) comboBadge.style.display = 'none';
+
+    const speechEl = document.getElementById('typing-speech-bubble');
+    if (speechEl) speechEl.textContent = 'おしい！もういちど！';
 
     // 画面キーボードやステージのシェイク演出
     const stageCard = document.getElementById('typing-stage-card');
@@ -2873,15 +2882,23 @@ function handleQuestionComplete() {
   SoundFx.playCorrect();
   const world = TYPING_WORLDS[typingSelectedWorld];
 
-  document.getElementById('romaji-typed').textContent = typingTypedString;
-  document.getElementById('romaji-next').textContent = '';
-  document.getElementById('romaji-remain').textContent = '';
-  document.getElementById('typing-speech-bubble').textContent = world.sounds.success;
+  const typedEl = document.getElementById('romaji-typed');
+  if (typedEl) typedEl.textContent = typingTypedString;
+
+  const nextEl = document.getElementById('romaji-next');
+  if (nextEl) nextEl.textContent = '';
+
+  const remainEl = document.getElementById('romaji-remain');
+  if (remainEl) remainEl.textContent = '';
+
+  const speechEl = document.getElementById('typing-speech-bubble');
+  if (speechEl) speechEl.textContent = world.sounds.success;
 
   // ポイント加算（1問クリアごとに約0.5pt目安、セッション合計2〜5pt）
   const earnedPerQ = (typingSelectedCourse === 'hard' ? 0.6 : (typingSelectedCourse === 'normal' ? 0.5 : 0.35));
   typingSessionPoints = Math.min(5, Math.round(typingCurrentIndex * earnedPerQ + 2));
-  document.getElementById('typing-session-points').textContent = typingSessionPoints;
+  const pointsEl = document.getElementById('typing-session-points');
+  if (pointsEl) pointsEl.textContent = typingSessionPoints;
 
   // 正解エフェクト
   const fb = document.getElementById('typing-feedback-overlay');
