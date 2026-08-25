@@ -1813,18 +1813,18 @@ function buildQuiz(count, isWeakOnly = false) {
 }
 
 // =============================================
-//  DIFFICULTY & POINT CALCULATION (漢字読みクイズ: 基本0.5pt)
+//  DIFFICULTY & POINT CALCULATION (漢字読みクイズ: 基本0.2pt)
 // =============================================
 function calcQuestionPoint(q) {
-  const basePoints = 0.5;
-  const bonus = q.isWeakRevenge ? 0.5 : 0;
+  const basePoints = 0.2;
+  const bonus = q.isWeakRevenge ? 0.2 : 0;
   const total = Math.round((basePoints + bonus) * 100) / 100;
 
   return {
     basePoints,
     bonus,
     total,
-    label: bonus > 0 ? `正解で +${total}pt (克服ボーナス+0.5!)` : `正解で +${basePoints}pt`,
+    label: bonus > 0 ? `正解で +${total}pt (克服ボーナス+0.2!)` : `正解で +${basePoints}pt`,
     badgeClass: bonus > 0 ? 'gold' : 'bronze'
   };
 }
@@ -3665,31 +3665,43 @@ function showWritingResult() {
   let limitNotice = '';
 
   if (acc && writingEarnedPoints > 0) {
-    const limits = checkAndInitMonthlyLimits(acc);
-    const todayRemain = Math.max(0, MAX_DAILY_POINTS - limits.todayEarned);
-    const monthRemain = Math.max(0, MAX_MONTHLY_POINTS - limits.monthlyEarned);
+    checkAndResetLimits(acc);
+    const limits = acc.monthlyLimits || getDefaultLimits();
 
-    actualEarned = Math.min(writingEarnedPoints, todayRemain, monthRemain);
+    const monthlyRemain = Math.max(0, limits.maxMonthly - (limits.monthlyEarned || 0));
+    const dailyRemain = limits.carryOverUnlocked
+      ? monthlyRemain
+      : Math.max(0, limits.maxDaily - (limits.todayEarned || 0));
+
+    const availableLimit = Math.min(monthlyRemain, dailyRemain);
+    actualEarned = Math.min(writingEarnedPoints, availableLimit);
     actualEarned = Math.round(actualEarned * 100) / 100;
 
-    if (actualEarned > 0) {
-      acc.points = Math.round((acc.points + actualEarned) * 100) / 100;
-      limits.todayEarned = Math.round((limits.todayEarned + actualEarned) * 100) / 100;
-      limits.monthlyEarned = Math.round((limits.monthlyEarned + actualEarned) * 100) / 100;
+    if (actualEarned < writingEarnedPoints) {
+      if (monthlyRemain <= 0) {
+        limitNotice = `🌟 今月のポイント上限（${limits.maxMonthly}pt）を達成したよ！すごい！来月1日にリセットされるよ！（練習はそのまま続けられるよ）`;
+      } else if (dailyRemain <= 0) {
+        limitNotice = `🌟 今日のポイント目安上限（${limits.maxDaily}pt）を達成したよ！あしたもがんばろう！（練習はそのまま続けられるよ）`;
+      } else {
+        limitNotice = `🌟 上限まであと ${formatPoints(actualEarned)}pt 獲得しました！（残りの問題も練習できるよ）`;
+      }
+    }
 
-      if (!acc.history) acc.history = [];
-      acc.history.unshift({
-        date: new Date().toISOString(),
-        description: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
-        points: actualEarned,
-        balance: acc.points
+    if (actualEarned > 0) {
+      acc.points = Math.round(((acc.points || 0) + actualEarned) * 100) / 100;
+      limits.monthlyEarned = Math.round(((limits.monthlyEarned || 0) + actualEarned) * 100) / 100;
+      limits.todayEarned = Math.round(((limits.todayEarned || 0) + actualEarned) * 100) / 100;
+
+      if (!acc.pointHistory) acc.pointHistory = [];
+      acc.pointHistory.push({
+        type: 'earn',
+        title: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
+        amount: actualEarned,
+        date: Date.now()
       });
 
       saveAccounts();
-    }
-
-    if (actualEarned < writingEarnedPoints) {
-      limitNotice = `⚠️ 1日の上限または月間上限に達したため、${formatPoints(actualEarned)}pt の獲得となりました。`;
+      renderAccountScreen();
     }
   }
 
