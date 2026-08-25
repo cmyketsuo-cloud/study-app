@@ -2630,9 +2630,14 @@ function startTypingGame() {
   typingStartTime = Date.now();
   isTypingInputBlocked = false;
 
-  document.getElementById('typing-q-total').textContent = typingQuizList.length;
-  document.getElementById('typing-session-points').textContent = '0';
-  document.getElementById('typing-quiz-world-tag').textContent = `${world.emoji} ${world.name.split(' ')[0]}`;
+  const totalEl = document.getElementById('typing-q-total');
+  if (totalEl) totalEl.textContent = typingQuizList.length;
+
+  const pointsEl = document.getElementById('typing-session-points');
+  if (pointsEl) pointsEl.textContent = '0';
+
+  const tagEl = document.getElementById('typing-quiz-world-tag');
+  if (tagEl) tagEl.textContent = `${world.emoji} ${world.name.split(' ')[0]}`;
 
   // テーマクラスの適用
   const stageCard = document.getElementById('typing-stage-card');
@@ -2663,19 +2668,34 @@ function setupTypingQuestion() {
   }
 
   const q = typingQuizList[typingCurrentIndex];
-  document.getElementById('typing-q-current').textContent = typingCurrentIndex + 1;
-  const progress = ((typingCurrentIndex) / typingQuizList.length) * 100;
-  document.getElementById('typing-progress-bar').style.width = `${progress}%`;
+  const curEl = document.getElementById('typing-q-current');
+  if (curEl) curEl.textContent = typingCurrentIndex + 1;
 
-  document.getElementById('typing-target-kanji').textContent = q.kanji;
-  document.getElementById('typing-target-kana').textContent = q.kana;
-  document.getElementById('typing-hint-text').textContent = q.hint ? `💡 ヒント: ${q.hint}` : '';
+  const barEl = document.getElementById('typing-progress-bar');
+  if (barEl) {
+    const progress = ((typingCurrentIndex) / typingQuizList.length) * 100;
+    barEl.style.width = `${progress}%`;
+  }
+
+  const kanjiEl = document.getElementById('typing-target-kanji');
+  if (kanjiEl) kanjiEl.textContent = q.kanji;
+
+  const kanaEl = document.getElementById('typing-target-kana');
+  if (kanaEl) kanaEl.textContent = q.kana;
+
+  const hintEl = document.getElementById('typing-hint-text');
+  if (hintEl) hintEl.textContent = q.hint ? `💡 ヒント: ${q.hint}` : '';
 
   // ワールドキャラクター初期メッセージ
   const world = TYPING_WORLDS[typingSelectedWorld];
-  document.getElementById('typing-char-emoji').textContent = world.emoji;
-  document.getElementById('typing-speech-bubble').textContent = 'がんばってタイプしよう！';
-  document.getElementById('typing-combo-num').textContent = typingCurrentCombo;
+  const charEmojiEl = document.getElementById('typing-char-emoji');
+  if (charEmojiEl) charEmojiEl.textContent = world.emoji;
+
+  const bubbleEl = document.getElementById('typing-speech-bubble');
+  if (bubbleEl) bubbleEl.textContent = 'がんばってタイプしよう！';
+
+  const comboEl = document.getElementById('typing-combo-num');
+  if (comboEl) comboEl.textContent = typingCurrentCombo;
 
   // ローマ字パターンのパース
   typingPatternNodes = buildRomajiPattern(q.kana);
@@ -2700,9 +2720,14 @@ function updateTypingDisplay() {
     remainRest += typingPatternNodes[i].options[0];
   }
 
-  document.getElementById('romaji-typed').textContent = typingTypedString;
-  document.getElementById('romaji-next').textContent = nextChar;
-  document.getElementById('romaji-remain').textContent = remainRest;
+  const typedEl = document.getElementById('romaji-typed');
+  if (typedEl) typedEl.textContent = typingTypedString;
+
+  const nextEl = document.getElementById('romaji-next');
+  if (nextEl) nextEl.textContent = nextChar;
+
+  const remainEl = document.getElementById('romaji-remain');
+  if (remainEl) remainEl.textContent = remainRest;
 
   // 画面キーボードのハイライト
   updateKeyboardGuide(nextChar.toUpperCase());
