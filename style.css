@@ -3676,6 +3676,86 @@ body {
   cursor: pointer;
 }
 
+/* 🔥 激激ムズムズ ボタン専用スタイル */
+.btn-insane {
+  background: linear-gradient(135deg, #dc2626, #7c3aed) !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  font-weight: 900 !important;
+  animation: insanePulse 1.5s ease-in-out infinite;
+}
+.btn-insane:hover, .btn-insane.active {
+  background: linear-gradient(135deg, #b91c1c, #6d28d9) !important;
+  transform: translateY(-2px) scale(1.06) !important;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4) !important;
+}
+@keyframes insanePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+}
+
+/* insane 警告バナー */
+.insane-warning {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #fef2f2, #ede9fe);
+  border: 2px solid #dc2626;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #dc2626;
+  text-align: center;
+  animation: insanePulse 1.5s ease-in-out infinite;
+}
+
+/* ⏱️ タイムアタックタイマーバー */
+.typing-timer-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+}
+.typing-timer-track {
+  flex: 1;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.typing-timer-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #22c55e, #84cc16);
+  border-radius: 99px;
+  transition: width 0.1s linear, background 0.3s;
+}
+.typing-timer-bar.danger {
+  background: linear-gradient(90deg, #dc2626, #f43f5e);
+  animation: timerDanger 0.5s ease-in-out infinite alternate;
+}
+@keyframes timerDanger {
+  0% { opacity: 1; }
+  100% { opacity: 0.65; }
+}
+.typing-timer-badge {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #334155;
+  min-width: 56px;
+  text-align: right;
+}
+.typing-timer-badge.danger {
+  color: #dc2626;
+  animation: timerDanger 0.5s ease-in-out infinite alternate;
+}
+
+/* 激激ムズムズ 専用ステージテーマ */
+.typing-stage-card.insane-mode {
+  border: 3px solid #dc2626;
+  background: linear-gradient(135deg, #fff1f2 0%, #ede9fe 100%);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
 /* Typing Quiz Layout */
 .typing-quiz-container {
   width: 100%;

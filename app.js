@@ -2543,16 +2543,27 @@ function showMathResult() {
 // =============================================
 //  TYPING PRACTICE MODULE (ローマ字タイピング練習)
 // =============================================
+// ポイントテーブル: easy=0.1固定, normal/hard=タイム成績次第, insane=大量ポイント
 const TYPING_POINT_TABLE = {
-  easy:   { S: 0.4, A: 0.3, B: 0.2, C: 0 },
-  normal: { S: 0.6, A: 0.5, B: 0.3, C: 0 },
-  hard:   { S: 0.8, A: 0.6, B: 0.4, C: 0 },
+  easy:   { S: 0.1, A: 0.1, B: 0.1, C: 0.1 },  // かんたん: 一律0.1pt (練習用)
+  normal: { S: 0.4, A: 0.3, B: 0.2, C: 0.05 }, // ふつう: タイムアタック成績次第
+  hard:   { S: 0.9, A: 0.7, B: 0.5, C: 0.1 },  // 激ムズ: タイムアタック成績次第
+  insane: { CLEAR: 1.8, FAIL: 0 },               // 激激ムズムズ: ノーミス全完走で1.8pt
+};
+
+// タイムアタック: 1文字あたりの制限秒数（ローマ字は平均1.2〜2文字/かな文字）
+const TYPING_TIME_PER_CHAR = {
+  easy:   0,    // 制限なし
+  normal: 1.4,  // ふつう: 1かな文字あたり1.4秒
+  hard:   0.9,  // 激ムズ: 1かな文字あたり0.9秒
+  insane: 0.55, // 激激ムズムズ: 1かな文字あたり0.55秒（超高速！）
 };
 
 const TYPING_COURSE_NAMES = {
-  easy: '🐣 かんたん',
+  easy:   '🐣 かんたん',
   normal: '🐥 ふつう',
-  hard: '🦅 激ムズ',
+  hard:   '🦅 激ムズ',
+  insane: '🔥 激激ムズムズ',
 };
 
 let typingSelectedWorld = 'chiikawa';
@@ -2574,6 +2585,132 @@ let typingMaxCombo = 0;
 let typingStartTime = 0;
 let typingSessionPoints = 0;
 let isTypingInputBlocked = false;
+
+// タイムアタック用変数
+let typingTimerInterval = null;   // setInterval ID
+let typingTimerRemain = 0;        // 残り秒数
+let typingTimerTotal = 0;         // 問題の制限秒数
+let typingInsaneFailed = false;   // 激激ムズムズ失敗フラグ
+let typingInsaneTotalScore = 0;   // 激激ムズムズ クリア問題数カウント
+
+// =============================================
+//  タイムアタックタイマー関数
+// =============================================
+
+/**
+ * 問題のかな文字列からコースに応じた制限秒数を計算する
+ * ローマ字では 1 かな ≒ 2 キーストロークになることを考慮
+ */
+function calcQuestionTime(kana, course) {
+  const timePerChar = TYPING_TIME_PER_CHAR[course] || 0;
+  if (timePerChar === 0) return 0;
+  // かな文字数（記号・スペースを除く実質文字数）でカウント
+  const charCount = [...kana].filter(c => c !== '…' && c !== ' ').length;
+  return Math.max(5, Math.round(charCount * timePerChar * 10) / 10);
+}
+
+function stopQuestionTimer() {
+  if (typingTimerInterval) {
+    clearInterval(typingTimerInterval);
+    typingTimerInterval = null;
+  }
+  const wrap = document.getElementById('typing-timer-wrap');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function startQuestionTimer(totalSec) {
+  stopQuestionTimer();
+  if (!totalSec || totalSec <= 0) return;
+
+  typingTimerRemain = totalSec;
+  typingTimerTotal = totalSec;
+
+  const wrap = document.getElementById('typing-timer-wrap');
+  if (wrap) wrap.style.display = 'flex';
+
+  _updateTimerDisplay();
+
+  typingTimerInterval = setInterval(() => {
+    typingTimerRemain = Math.max(0, Math.round((typingTimerRemain - 0.1) * 10) / 10);
+    _updateTimerDisplay();
+
+    if (typingTimerRemain <= 0) {
+      clearInterval(typingTimerInterval);
+      typingTimerInterval = null;
+      onTimeUp();
+    }
+  }, 100);
+}
+
+function _updateTimerDisplay() {
+  const secEl = document.getElementById('typing-timer-sec');
+  if (secEl) secEl.textContent = typingTimerRemain.toFixed(1);
+
+  const barEl = document.getElementById('typing-timer-bar');
+  if (barEl) {
+    const pct = typingTimerTotal > 0 ? (typingTimerRemain / typingTimerTotal) * 100 : 0;
+    barEl.style.width = pct + '%';
+
+    // 残り30%以下で赤く点滅
+    if (pct <= 30) {
+      barEl.classList.add('danger');
+    } else {
+      barEl.classList.remove('danger');
+    }
+  }
+
+  const badge = document.getElementById('typing-timer-badge');
+  if (badge) {
+    if (typingTimerRemain <= 3) {
+      badge.classList.add('danger');
+    } else {
+      badge.classList.remove('danger');
+    }
+  }
+}
+
+function onTimeUp() {
+  if (isTypingInputBlocked) return;
+  isTypingInputBlocked = true;
+  stopQuestionTimer();
+
+  const fb = document.getElementById('typing-feedback-overlay');
+
+  if (typingSelectedCourse === 'insane') {
+    // 激激ムズムズ: タイムアップ = 即ゲームオーバー
+    typingInsaneFailed = true;
+    if (fb) {
+      fb.innerHTML = `
+        <span class="fb-symbol fb-wrong pop-bounce">
+          ⏰<br>
+          <small style="font-size:1.1rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #dc2626;color:#dc2626;">タイムアップ！ゲームオーバー！</small>
+        </span>
+      `;
+      fb.classList.add('show');
+    }
+    setTimeout(() => {
+      fb && fb.classList.remove('show');
+      finishTypingQuiz();
+    }, 1800);
+  } else {
+    // ふつう・激ムズ: タイムアップで次の問題へ（0点）
+    if (fb) {
+      fb.innerHTML = `
+        <span class="fb-symbol fb-wrong pop-bounce">
+          ⏰<br>
+          <small style="font-size:1.1rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #f59e0b;color:#d97706;">タイムアップ！次の問題へ</small>
+        </span>
+      `;
+      fb.classList.add('show');
+    }
+    setTimeout(() => {
+      fb && fb.classList.remove('show');
+      typingCurrentIndex++;
+      setupTypingQuestion();
+    }, 1500);
+  }
+}
+
 
 function openTypingStart() {
   if (currentAccountId === null) return;
@@ -2599,6 +2736,12 @@ function openTypingStart() {
       badgeTag.style.color = '#16a34a';
       badgeTag.style.borderColor = '#bbf7d0';
     }
+  }
+
+  // insane-warning の表示/非表示
+  const insaneWarn = document.getElementById('insane-warning');
+  if (insaneWarn) {
+    insaneWarn.style.display = typingSelectedCourse === 'insane' ? 'block' : 'none';
   }
 
   switchTypingWorld(typingSelectedWorld);
@@ -2635,9 +2778,11 @@ function startTypingGame() {
   const world = TYPING_WORLDS[typingSelectedWorld];
   const courseQuestions = (world.courses && world.courses[typingSelectedCourse]) || world.courses.easy;
 
-  // 出題リスト（シャッフルして8問）
+  // 出題リスト（シャッフルして激激ムズムズは全問、それ以外は8問）
   const shuffled = [...courseQuestions].sort(() => Math.random() - 0.5);
-  typingQuizList = shuffled.slice(0, Math.min(8, shuffled.length));
+  typingQuizList = typingSelectedCourse === 'insane'
+    ? shuffled  // insaneは全問使用
+    : shuffled.slice(0, Math.min(8, shuffled.length));
 
   typingCurrentIndex = 0;
   typingTotalKeystrokes = 0;
@@ -2647,6 +2792,10 @@ function startTypingGame() {
   typingSessionPoints = 0;
   typingStartTime = Date.now();
   isTypingInputBlocked = false;
+  typingInsaneFailed = false;
+  typingInsaneTotalScore = 0;
+
+  stopQuestionTimer();
 
   const totalEl = document.getElementById('typing-q-total');
   if (totalEl) totalEl.textContent = typingQuizList.length;
@@ -2660,7 +2809,7 @@ function startTypingGame() {
   // テーマクラスの適用
   const stageCard = document.getElementById('typing-stage-card');
   if (stageCard) {
-    stageCard.className = `typing-stage-card pop-card ${world.themeClass}`;
+    stageCard.className = `typing-stage-card pop-card ${world.themeClass}${typingSelectedCourse === 'insane' ? ' insane-mode' : ''}`;
   }
 
   // 指ガイドの表示/非表示
@@ -2678,6 +2827,14 @@ function setupTypingQuestion() {
     finishTypingQuiz();
     return;
   }
+
+  // 激激ムズムズの失敗時はそのまま終了画面へ
+  if (typingInsaneFailed) {
+    finishTypingQuiz();
+    return;
+  }
+
+  stopQuestionTimer();
 
   const fb = document.getElementById('typing-feedback-overlay');
   if (fb) {
@@ -2710,7 +2867,11 @@ function setupTypingQuestion() {
   if (charEmojiEl) charEmojiEl.textContent = world.emoji;
 
   const bubbleEl = document.getElementById('typing-speech-bubble');
-  if (bubbleEl) bubbleEl.textContent = 'がんばってタイプしよう！';
+  if (bubbleEl) {
+    bubbleEl.textContent = typingSelectedCourse === 'insane'
+      ? '★ノーミスクリアで大量ポイント！★'
+      : 'がんばってタイプしよう！';
+  }
 
   const comboEl = document.getElementById('typing-combo-num');
   if (comboEl) comboEl.textContent = typingCurrentCombo;
@@ -2721,8 +2882,13 @@ function setupTypingQuestion() {
   typingCurrentCandidate = typingPatternNodes[0].options[0];
   typingMatchedLen = 0;
   typingTypedString = '';
+  isTypingInputBlocked = false;
 
   updateTypingDisplay();
+
+  // タイムアタックタイマー開始（easyは0なので無効）
+  const timeSec = calcQuestionTime(q.kana, typingSelectedCourse);
+  startQuestionTimer(timeSec);
 }
 
 function updateTypingDisplay() {
@@ -2865,20 +3031,52 @@ function handleTypingInput(inputChar) {
     const comboBadge = document.getElementById('typing-combo-badge');
     if (comboBadge) comboBadge.style.display = 'none';
 
-    const speechEl = document.getElementById('typing-speech-bubble');
-    if (speechEl) speechEl.textContent = 'おしい！もういちど！';
+    if (typingSelectedCourse === 'insane') {
+      // 🔥 激激ムズムズ: 1文字ミスで即ゲームオーバー！
+      isTypingInputBlocked = true;
+      stopQuestionTimer();
+      typingInsaneFailed = true;
 
-    // 画面キーボードやステージのシェイク演出
-    const stageCard = document.getElementById('typing-stage-card');
-    if (stageCard) {
-      stageCard.classList.add('pop-shake');
-      setTimeout(() => stageCard.classList.remove('pop-shake'), 300);
+      const speechEl = document.getElementById('typing-speech-bubble');
+      if (speechEl) speechEl.textContent = '⚡ミスタイプ！一発終了！';
+
+      const stageCard = document.getElementById('typing-stage-card');
+      if (stageCard) {
+        stageCard.classList.add('pop-shake');
+        setTimeout(() => stageCard.classList.remove('pop-shake'), 300);
+      }
+
+      const fb = document.getElementById('typing-feedback-overlay');
+      if (fb) {
+        fb.innerHTML = `
+          <span class="fb-symbol fb-wrong pop-bounce">
+            ⚡<br>
+            <small style="font-size:1.1rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #dc2626;color:#dc2626;">ミスタイプ！ゲームオーバー！</small>
+          </span>
+        `;
+        fb.classList.add('show');
+      }
+      setTimeout(() => {
+        fb && fb.classList.remove('show');
+        finishTypingQuiz();
+      }, 1800);
+    } else {
+      // 通常: ミスエフェクトのみ、次の打鍵を待つ
+      const speechEl = document.getElementById('typing-speech-bubble');
+      if (speechEl) speechEl.textContent = 'おしい！もういちど！';
+
+      const stageCard = document.getElementById('typing-stage-card');
+      if (stageCard) {
+        stageCard.classList.add('pop-shake');
+        setTimeout(() => stageCard.classList.remove('pop-shake'), 300);
+      }
     }
   }
 }
 
 function handleQuestionComplete() {
   isTypingInputBlocked = true;
+  stopQuestionTimer();
   SoundFx.playCorrect();
   const world = TYPING_WORLDS[typingSelectedWorld];
 
@@ -2894,11 +3092,22 @@ function handleQuestionComplete() {
   const speechEl = document.getElementById('typing-speech-bubble');
   if (speechEl) speechEl.textContent = world.sounds.success;
 
-  // ポイント加算（1問クリアごとに約0.5pt目安、セッション合計2〜5pt）
-  const earnedPerQ = (typingSelectedCourse === 'hard' ? 0.6 : (typingSelectedCourse === 'normal' ? 0.5 : 0.35));
-  typingSessionPoints = Math.min(5, Math.round(typingCurrentIndex * earnedPerQ + 2));
+  // 激激ムズムズ: クリア問題数をカウント
+  if (typingSelectedCourse === 'insane') {
+    typingInsaneTotalScore++;
+  }
+
+  // ポイントプレビュー（セッション中の暫定）
+  let previewPts = 0;
+  if (typingSelectedCourse === 'easy') previewPts = 0.1;
+  else if (typingSelectedCourse === 'normal') previewPts = 0.3;
+  else if (typingSelectedCourse === 'hard') previewPts = 0.7;
+  else if (typingSelectedCourse === 'insane') previewPts = 0; // 全問クリア後に確定
+  typingSessionPoints += previewPts;
   const pointsEl = document.getElementById('typing-session-points');
-  if (pointsEl) pointsEl.textContent = typingSessionPoints;
+  if (pointsEl && typingSelectedCourse !== 'insane') {
+    pointsEl.textContent = typingSessionPoints.toFixed(1);
+  }
 
   // 正解エフェクト
   const fb = document.getElementById('typing-feedback-overlay');
@@ -2922,6 +3131,7 @@ function handleQuestionComplete() {
 
 function skipTypingQuestion() {
   SoundFx.playTap();
+  stopQuestionTimer();
   typingCurrentIndex++;
   isTypingInputBlocked = false;
   if (typingCurrentIndex < typingQuizList.length) {
@@ -2932,6 +3142,7 @@ function skipTypingQuestion() {
 }
 
 function finishTypingQuiz() {
+  stopQuestionTimer();
   const elapsedSec = Math.max(1, (Date.now() - typingStartTime) / 1000);
   const wpm = Math.round((typingTotalKeystrokes / elapsedSec) * 60);
   const accuracy = typingTotalKeystrokes > 0 
@@ -2946,8 +3157,17 @@ function finishTypingQuiz() {
   else rank = 'C';
 
   // 獲得ポイント（難易度コース × 達成ランクの傾斜ポイント設計）
-  const courseTable = TYPING_POINT_TABLE[typingSelectedCourse] || TYPING_POINT_TABLE.easy;
-  const basePoints = courseTable[rank] || 0;
+  let basePoints = 0;
+  if (typingSelectedCourse === 'insane') {
+    // 激激ムズムズ: 全問ノーミスクリアのみ 1.8pt、失敗は0pt
+    const totalQ = typingQuizList.length;
+    basePoints = (!typingInsaneFailed && typingInsaneTotalScore >= totalQ)
+      ? TYPING_POINT_TABLE.insane.CLEAR
+      : TYPING_POINT_TABLE.insane.FAIL;
+  } else {
+    const courseTable = TYPING_POINT_TABLE[typingSelectedCourse] || TYPING_POINT_TABLE.easy;
+    basePoints = courseTable[rank] || courseTable['C'] || 0;
+  }
 
   // ポイント通帳への加算処理（上限チェック）
   const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
@@ -4039,6 +4259,12 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.typing-course-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       typingSelectedCourse = btn.dataset.course || 'easy';
+
+      // insane 警告表示
+      const insaneWarn = document.getElementById('insane-warning');
+      if (insaneWarn) {
+        insaneWarn.style.display = typingSelectedCourse === 'insane' ? 'block' : 'none';
+      }
     });
   });
 
