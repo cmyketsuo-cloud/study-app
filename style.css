@@ -3780,6 +3780,8 @@ body {
   background: #f8fafc;
   border-radius: var(--radius-md);
   display: inline-block;
+  min-height: 3rem;
+  min-width: 200px;
 }
 .romaji-typed {
   color: #94a3b8;
@@ -3794,6 +3796,33 @@ body {
 }
 .romaji-remain {
   color: #334155;
+}
+
+/* 🔥 3年生以上: ローマ字アシストなしモード */
+.typing-romaji-box.no-assist {
+  background: #f1f5f9;
+  border: 1.5px dashed #cbd5e1;
+  min-height: 2.8rem;
+}
+.typing-romaji-box.no-assist .romaji-typed {
+  color: #059669;
+  text-decoration: none;
+  font-weight: 900;
+  border-bottom: 3px solid #10b981;
+  padding-bottom: 2px;
+}
+.typing-romaji-box.no-assist .romaji-next,
+.typing-romaji-box.no-assist .romaji-remain {
+  display: none !important;
+}
+.typing-romaji-box.no-assist:empty::before,
+.typing-romaji-box.no-assist:has(.romaji-typed:empty)::before {
+  content: '⌨️ 日本語を見て打とう！';
+  font-size: 1.1rem;
+  color: #94a3b8;
+  font-family: var(--font-rounded);
+  letter-spacing: normal;
+  display: block;
 }
 
 @keyframes pulseKey {

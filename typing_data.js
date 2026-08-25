@@ -24,26 +24,56 @@ const ROMAJI_TABLE = {
   'ば': ['ba'], 'び': ['bi'], 'ぶ': ['bu'], 'べ': ['be'], 'ぼ': ['bo'],
   'ぱ': ['pa'], 'ぴ': ['pi'], 'ぷ': ['pu'], 'ぺ': ['pe'], 'ぽ': ['po'],
 
-  // 拗音
+  // 拗音・特殊音・外来語
   'きゃ': ['kya'], 'きぃ': ['kyi'], 'きゅ': ['kyu'], 'きぇ': ['kye'], 'きょ': ['kyo'],
-  'しゃ': ['sya', 'sha'], 'しぃ': ['syi'], 'しゅ': ['syu', 'shu'], 'しぇ': ['sye', 'she'], 'しょ': ['syo', 'sho'],
-  'ちゃ': ['tya', 'cha', 'cya'], 'ちぃ': ['tyi'], 'ちゅ': ['tyu', 'chu', 'cyu'], 'ちぇ': ['tye', 'che', 'cye'], 'ちょ': ['tyo', 'cho', 'cyo'],
+  'しゃ': ['sya', 'sha'], 'しぃ': ['syi'], 'しゅ': ['syu', 'shu'], 'しぇ': ['sye', 'she', 'sile', 'sixe', 'shile', 'shixe'], 'しょ': ['syo', 'sho'],
+  'ちゃ': ['tya', 'cha', 'cya'], 'ちぃ': ['tyi'], 'ちゅ': ['tyu', 'chu', 'cyu'], 'ちぇ': ['tye', 'che', 'cye', 'tile', 'tixe', 'chile', 'chixe'], 'ちょ': ['tyo', 'cho', 'cyo'],
   'にゃ': ['nya'], 'にぃ': ['nyi'], 'にゅ': ['nyu'], 'にぇ': ['nye'], 'にょ': ['nyo'],
   'ひゃ': ['hya'], 'ひぃ': ['hyi'], 'ひゅ': ['hyu'], 'ひぇ': ['hye'], 'ひょ': ['hyo'],
   'みゃ': ['mya'], 'みぃ': ['myi'], 'みゅ': ['myu'], 'みぇ': ['mye'], 'みょ': ['myo'],
   'りゃ': ['rya'], 'りぃ': ['ryi'], 'りゅ': ['ryu'], 'りぇ': ['rye'], 'りょ': ['ryo'],
   'ぎゃ': ['gya'], 'ぎぃ': ['gyi'], 'ぎゅ': ['gyu'], 'ぎぇ': ['gye'], 'ぎょ': ['gyo'],
-  'じゃ': ['zya', 'ja', 'jya'], 'じぃ': ['zyi', 'jyi'], 'じゅ': ['zyu', 'ju', 'jyu'], 'じぇ': ['zye', 'je', 'jye'], 'じょ': ['zyo', 'jo', 'jyo'],
-  'ぢゃ': ['dya'], 'ぢぃ': ['dyi'], 'ぢゅ': ['dyu'], 'ぢぇ': ['dye'], 'ぢょ': ['dyo'],
+  'じゃ': ['zya', 'ja', 'jya'], 'じぃ': ['zyi', 'jyi'], 'じゅ': ['zyu', 'ju', 'jyu'], 'じぇ': ['zye', 'je', 'jye', 'zile', 'zixe', 'jile', 'jixe'], 'じょ': ['zyo', 'jo', 'jyo'],
+  'ぢゃ': ['dya'], 'ぢぃ': ['dyi'], 'ぢゅ': ['dyu'], 'ぢぇ': ['dye', 'dile', 'dixe'], 'ぢょ': ['dyo'],
   'びゃ': ['bya'], 'びぃ': ['byi'], 'びゅ': ['byu'], 'びぇ': ['bye'], 'びょ': ['byo'],
   'ぴゃ': ['pya'], 'ぴぃ': ['pyi'], 'ぴゅ': ['pyu'], 'ぴぇ': ['pye'], 'ぴょ': ['pyo'],
+
+  // 外来語・合拗音（フェ、ファ、フィ、フォ、ティ、ディ、デュ、ウィ、ウェ、ウォ、ヴァ〜ヴォ等）
+  'ふぁ': ['fa', 'fwa', 'hua', 'hula', 'huxa', 'fula', 'fuxa'],
+  'ふぃ': ['fi', 'fwi', 'hui', 'huli', 'huxi', 'fuli', 'fuxi'],
+  'ふぇ': ['fe', 'fwe', 'hue', 'hule', 'huxe', 'fule', 'fuxe'],
+  'ふぉ': ['fo', 'fwo', 'huo', 'hulo', 'huxo', 'fulo', 'fuxo'],
+  'てぃ': ['thi', 'ti', 'teli', 'texi'],
+  'てゅ': ['thu', 'telyu', 'texyu'],
+  'でぃ': ['dhi', 'di', 'deli', 'dexi'],
+  'でゅ': ['dhu', 'delyu', 'dexyu'],
+  'とぅ': ['twu', 'tolu', 'toxu'],
+  'どぅ': ['dwu', 'dolu', 'doxu'],
+  'うぃ': ['wi', 'ui', 'uli', 'uxi', 'whi'],
+  'うぇ': ['we', 'ue', 'ule', 'uxe', 'whe'],
+  'うぉ': ['who', 'ulo', 'uxo'],
+  'くぁ': ['qa', 'qwa', 'kula', 'kuxa'],
+  'くぃ': ['qi', 'qwi', 'kuli', 'kuxi'],
+  'くぇ': ['qe', 'qwe', 'kule', 'kuxe'],
+  'くぉ': ['qo', 'qwo', 'kulo', 'kuxo'],
+  'ぐぁ': ['gwa', 'gula', 'guxa'],
+  'つぁ': ['tsa', 'tula', 'tuxa', 'tsula', 'tsuxa'],
+  'つぃ': ['tsi', 'tuli', 'tuxi', 'tsuli', 'tsuxi'],
+  'つぇ': ['tse', 'tule', 'tuxe', 'tsule', 'tsuxe'],
+  'つぉ': ['tso', 'tulo', 'tuxo', 'tsulo', 'tsuxo'],
+  'ヴ': ['vu'],
+  'ゔ': ['vu'],
+  'ゔぁ': ['va', 'vula', 'vuxa'],
+  'ゔぃ': ['vi', 'vuli', 'vuxi'],
+  'ゔぇ': ['ve', 'vule', 'vuxe'],
+  'ゔぉ': ['vo', 'vulo', 'vuxo'],
 
   // 小文字単体
   'ぁ': ['la', 'xa'], 'ぃ': ['li', 'xi'], 'ぅ': ['lu', 'xu'], 'ぇ': ['le', 'xe'], 'ぉ': ['lo', 'xo'],
   'ゃ': ['lya', 'xya'], 'ゅ': ['lyu', 'xyu'], 'ょ': ['lyo', 'xyo'],
   'ゎ': ['lwa', 'xwa'],
   'っ': ['ltu', 'xtu', 'ltsu', 'xtsu'],
-  'ー': ['-'], '！': ['!'], '？': ['?'], ' ': [' ']
+  'ー': ['-'], '！': ['!'], '？': ['?'], ' ': [' '], '…': ['...']
 };
 
 // =============================================

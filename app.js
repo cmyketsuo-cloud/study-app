@@ -2580,8 +2580,26 @@ function openTypingStart() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
+  const grade = getGradeForAccount(acc) || calcGrade(acc.birthYear) || 5;
+  const isAdvancedGrade = grade >= 3;
+
   document.getElementById('typing-start-account-name').textContent = `${acc.name}さん、`;
   document.getElementById('typing-start-points-display').textContent = formatPoints(acc.points || 0);
+
+  const badgeTag = document.getElementById('typing-start-badge-tag');
+  if (badgeTag) {
+    if (isAdvancedGrade) {
+      badgeTag.innerHTML = `🔥 ${grade}年生: ローマ字アシストなし（日本語実践特訓！）`;
+      badgeTag.style.background = '#fef2f2';
+      badgeTag.style.color = '#dc2626';
+      badgeTag.style.borderColor = '#fecaca';
+    } else {
+      badgeTag.innerHTML = `🔰 ${grade}年生: ローマ字ガイド＆アシストつき`;
+      badgeTag.style.background = '#f0fdf4';
+      badgeTag.style.color = '#16a34a';
+      badgeTag.style.borderColor = '#bbf7d0';
+    }
+  }
 
   switchTypingWorld(typingSelectedWorld);
   showScreen('screen-typing-start');
@@ -2710,6 +2728,10 @@ function setupTypingQuestion() {
 function updateTypingDisplay() {
   if (typingNodeIndex >= typingPatternNodes.length) return;
 
+  const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
+  const grade = acc ? (getGradeForAccount(acc) || calcGrade(acc.birthYear) || 5) : 5;
+  const isAdvancedGrade = grade >= 3;
+
   const node = typingPatternNodes[typingNodeIndex];
   const candidate = typingCurrentCandidate;
   const nextChar = candidate[typingMatchedLen] || '';
@@ -2724,13 +2746,28 @@ function updateTypingDisplay() {
   if (typedEl) typedEl.textContent = typingTypedString;
 
   const nextEl = document.getElementById('romaji-next');
-  if (nextEl) nextEl.textContent = nextChar;
-
   const remainEl = document.getElementById('romaji-remain');
-  if (remainEl) remainEl.textContent = remainRest;
+  const romajiBox = document.getElementById('typing-romaji-box');
 
-  // 画面キーボードのハイライト
-  updateKeyboardGuide(nextChar.toUpperCase());
+  if (isAdvancedGrade) {
+    // 🔥 3年生以上: 打つべきローマ字アシスト（next / remain）を完全非表示
+    if (nextEl) nextEl.textContent = '';
+    if (remainEl) remainEl.textContent = '';
+    if (romajiBox) {
+      romajiBox.classList.add('no-assist');
+    }
+    // キーボードの光るキーガイドもオフ（自力で打鍵）
+    updateKeyboardGuide(null);
+  } else {
+    // 🔰 1・2年生: ローマ字ガイド＆アシストを表示
+    if (nextEl) nextEl.textContent = nextChar;
+    if (remainEl) remainEl.textContent = remainRest;
+    if (romajiBox) {
+      romajiBox.classList.remove('no-assist');
+    }
+    // キーボードの次打鍵ガイドをハイライト
+    updateKeyboardGuide(nextChar.toUpperCase());
+  }
 }
 
 function updateKeyboardGuide(charUpper) {
