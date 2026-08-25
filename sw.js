@@ -1,10 +1,11 @@
-const CACHE_NAME = 'wakuwaku-learning-v17';
+const CACHE_NAME = 'wakuwaku-learning-v18';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './quiz_data.js',
+  './writing_data.js',
   './math_data.js',
   './typing_data.js',
   './character_guide.png',

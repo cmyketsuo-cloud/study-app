@@ -3009,6 +3009,357 @@ window.addEventListener('keydown', (e) => {
 });
 
 // =============================================
+//  ✍️ 漢字書き取りドリル モジュール (WritingDrill & WritingCanvas)
+// =============================================
+let writingQuestions = [];
+let writingCurrentIndex = 0;
+let writingCorrectCount = 0;
+let writingEarnedPoints = 0;
+let writingSelectedCount = 5;
+
+// 手書きキャンバス管理オブジェクト
+const WritingCanvas = (() => {
+  let canvas = null;
+  let ctx = null;
+  let isDrawing = false;
+  let currentTool = 'pencil'; // 'pencil' | 'redpen' | 'eraser'
+  let undoStack = [];
+  const MAX_UNDO = 20;
+
+  function init() {
+    canvas = document.getElementById('writing-canvas');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    // 解像度（高DPI / Retina）対応
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const size = rect.width > 0 ? rect.width : 320;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Pointer Events（Apple Pencil・タッチ・マウス共通）
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
+    canvas.addEventListener('pointerleave', handlePointerUp);
+  }
+
+  function saveState() {
+    if (!ctx) return;
+    if (undoStack.length >= MAX_UNDO) undoStack.shift();
+    undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  }
+
+  function handlePointerDown(e) {
+    e.preventDefault();
+    isDrawing = true;
+    saveState();
+
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    applyStrokeStyle(e.pressure);
+  }
+
+  function handlePointerMove(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+
+    const pos = getPos(e);
+    applyStrokeStyle(e.pressure);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+
+  function handlePointerUp(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    isDrawing = false;
+    ctx.closePath();
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
+  function applyStrokeStyle(pressure) {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const p = pressure && pressure > 0 ? pressure : 0.6;
+
+    if (currentTool === 'pencil') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 6 + p * 6; // 6〜12px
+    } else if (currentTool === 'redpen') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 6 + p * 6;
+    } else if (currentTool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = 26;
+    }
+  }
+
+  function setTool(tool) {
+    currentTool = tool;
+    document.querySelectorAll('.canvas-tool-btn').forEach(btn => btn.classList.remove('active'));
+    if (tool === 'pencil') {
+      const b = document.getElementById('btn-tool-pencil');
+      if (b) b.classList.add('active');
+    } else if (tool === 'redpen') {
+      const b = document.getElementById('btn-tool-redpen');
+      if (b) b.classList.add('active');
+    } else if (tool === 'eraser') {
+      const b = document.getElementById('btn-tool-eraser');
+      if (b) b.classList.add('active');
+    }
+  }
+
+  function undo() {
+    if (!ctx || undoStack.length === 0) return;
+    SoundFx.playTap();
+    const last = undoStack.pop();
+    ctx.putImageData(last, 0, 0);
+  }
+
+  function clear() {
+    if (!canvas || !ctx) return;
+    SoundFx.playTap();
+    saveState();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function reset() {
+    undoStack = [];
+    if (ctx && canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    setTool('pencil');
+  }
+
+  return {
+    init,
+    setTool,
+    undo,
+    clear,
+    reset
+  };
+})();
+
+// 出題生成ロジック（現学年70% ＋ 前学年30%）
+function generateWritingQuestions(grade, count) {
+  const curGrade = Math.min(Math.max(grade || 1, 1), 6);
+  const prevGrade = curGrade > 1 ? curGrade - 1 : 1;
+
+  let curCount = count;
+  let prevCount = 0;
+
+  if (curGrade > 1) {
+    curCount = Math.round(count * 0.7); // 7割
+    prevCount = count - curCount;       // 3割
+  }
+
+  const curPool = (typeof WRITING_DATA !== 'undefined' && WRITING_DATA[curGrade]) ? WRITING_DATA[curGrade] : [];
+  const prevPool = (typeof WRITING_DATA !== 'undefined' && WRITING_DATA[prevGrade]) ? WRITING_DATA[prevGrade] : [];
+
+  const curSelected = shuffleArray([...curPool]).slice(0, curCount).map(item => ({ ...item, grade: curGrade }));
+  const prevSelected = shuffleArray([...prevPool]).slice(0, prevCount).map(item => ({ ...item, grade: prevGrade }));
+
+  return shuffleArray([...curSelected, ...prevSelected]);
+}
+
+function openWritingStart() {
+  SoundFx.playTap();
+  const acc = accounts[currentAccountId];
+  const grade = acc ? calcGrade(acc.birthYear) : 1;
+
+  const descEl = document.getElementById('writing-ratio-desc');
+  if (descEl) {
+    if (grade > 1) {
+      descEl.innerHTML = `現在の学年（<strong>${grade}年生 70%</strong>） ＋ 前の学年（<strong>${grade - 1}年生 30%</strong>）`;
+    } else {
+      descEl.innerHTML = `1年生の配当漢字（<strong>100%</strong>）を出題！`;
+    }
+  }
+
+  showScreen('screen-writing-start');
+}
+
+function startWritingQuiz() {
+  SoundFx.playTap();
+  const acc = accounts[currentAccountId];
+  const grade = acc ? calcGrade(acc.birthYear) : 1;
+
+  writingQuestions = generateWritingQuestions(grade, writingSelectedCount);
+  if (writingQuestions.length === 0) {
+    alert('問題データが見つかりませんでした。');
+    return;
+  }
+
+  writingCurrentIndex = 0;
+  writingCorrectCount = 0;
+  writingEarnedPoints = 0;
+
+  showScreen('screen-writing-quiz');
+  setTimeout(() => {
+    WritingCanvas.init();
+    renderWritingQuestion();
+  }, 100);
+}
+
+function renderWritingQuestion() {
+  WritingCanvas.reset();
+
+  const q = writingQuestions[writingCurrentIndex];
+  if (!q) return;
+
+  // 上部プログレス
+  document.getElementById('writing-quiz-step').textContent = `第 ${writingCurrentIndex + 1} 問 / ${writingQuestions.length} 問`;
+  document.getElementById('writing-quiz-grade-tag').textContent = `${q.grade}年生の漢字`;
+  const pct = Math.round(((writingCurrentIndex) / writingQuestions.length) * 100);
+  document.getElementById('writing-quiz-progress-bar').style.width = `${pct}%`;
+
+  // 問題文（【】部分をハイライト）
+  const formattedSentence = q.q.replace(/【(.*?)】/g, '<mark>$1</mark>');
+  document.getElementById('writing-question-sentence').innerHTML = formattedSentence;
+  document.getElementById('writing-target-reading-text').textContent = q.reading || '';
+  document.getElementById('writing-hint-text').textContent = `💡 ヒント：${q.hint || ''}`;
+  document.getElementById('writing-stroke-text').textContent = `✏️ 画数：${q.stroke || '―'}画`;
+
+  // 見本オーバーレイ
+  document.getElementById('writing-sample-kanji').textContent = q.kanji;
+  const overlay = document.getElementById('writing-sample-overlay');
+  overlay.style.display = 'none';
+
+  // 答え合わせ前状態
+  document.getElementById('btn-writing-check-answer').style.display = 'block';
+  document.getElementById('writing-grading-area').style.display = 'none';
+  document.getElementById('check-toggle-overlay').checked = true;
+}
+
+function checkWritingAnswer() {
+  SoundFx.playTap();
+  document.getElementById('btn-writing-check-answer').style.display = 'none';
+  document.getElementById('writing-grading-area').style.display = 'flex';
+
+  const overlay = document.getElementById('writing-sample-overlay');
+  const toggle = document.getElementById('check-toggle-overlay');
+  overlay.style.display = toggle.checked ? 'flex' : 'none';
+}
+
+function handleWritingGrading(isCorrect) {
+  const q = writingQuestions[writingCurrentIndex];
+  const acc = accounts[currentAccountId];
+
+  if (isCorrect) {
+    SoundFx.playCorrect();
+    writingCorrectCount++;
+    const pts = 2.0; // 1問 2.0pt
+    writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
+  } else {
+    SoundFx.playWrong();
+    if (acc) {
+      if (!acc.weakQuestions) acc.weakQuestions = [];
+      const exists = acc.weakQuestions.some(w => w.question === q.q && w.type === 'writing');
+      if (!exists) {
+        acc.weakQuestions.push({
+          type: 'writing',
+          question: q.q,
+          target: q.kanji,
+          reading: q.reading,
+          grade: q.grade
+        });
+        saveAccounts();
+      }
+    }
+  }
+
+  writingCurrentIndex++;
+  if (writingCurrentIndex < writingQuestions.length) {
+    renderWritingQuestion();
+  } else {
+    document.getElementById('writing-quiz-progress-bar').style.width = '100%';
+    setTimeout(() => showWritingResult(), 300);
+  }
+}
+
+function showWritingResult() {
+  const total = writingQuestions.length;
+  const pct = Math.round((writingCorrectCount / total) * 100);
+
+  document.getElementById('writing-result-correct').textContent = writingCorrectCount;
+  document.getElementById('writing-result-total').textContent = total;
+  document.getElementById('writing-result-accuracy').textContent = `正解率 ${pct}%`;
+
+  const acc = accounts[currentAccountId];
+  let actualEarned = 0;
+  let limitNotice = '';
+
+  if (acc && writingEarnedPoints > 0) {
+    const limits = checkAndInitMonthlyLimits(acc);
+    const todayRemain = Math.max(0, MAX_DAILY_POINTS - limits.todayEarned);
+    const monthRemain = Math.max(0, MAX_MONTHLY_POINTS - limits.monthlyEarned);
+
+    actualEarned = Math.min(writingEarnedPoints, todayRemain, monthRemain);
+    actualEarned = Math.round(actualEarned * 100) / 100;
+
+    if (actualEarned > 0) {
+      acc.points = Math.round((acc.points + actualEarned) * 100) / 100;
+      limits.todayEarned = Math.round((limits.todayEarned + actualEarned) * 100) / 100;
+      limits.monthlyEarned = Math.round((limits.monthlyEarned + actualEarned) * 100) / 100;
+
+      if (!acc.history) acc.history = [];
+      acc.history.unshift({
+        date: new Date().toISOString(),
+        description: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
+        points: actualEarned,
+        balance: acc.points
+      });
+
+      saveAccounts();
+    }
+
+    if (actualEarned < writingEarnedPoints) {
+      limitNotice = `⚠️ 1日の上限または月間上限に達したため、${formatPoints(actualEarned)}pt の獲得となりました。`;
+    }
+  }
+
+  document.getElementById('writing-result-earned-points').textContent = formatPoints(actualEarned);
+  const noticeEl = document.getElementById('writing-result-limit-notice');
+  if (noticeEl) {
+    noticeEl.style.display = limitNotice ? 'block' : 'none';
+    noticeEl.textContent = limitNotice;
+  }
+
+  // 演出
+  if (pct === 100) {
+    SoundFx.playFanfare();
+    ConfettiFx.launch(80);
+    document.getElementById('writing-result-title').textContent = '🌟 満点パーフェクト！';
+    document.getElementById('writing-result-subtitle').textContent = 'すごい！かんぺきに漢字が書けたね！';
+  } else if (pct >= 70) {
+    SoundFx.playFanfare();
+    ConfettiFx.launch(40);
+    document.getElementById('writing-result-title').textContent = '🎉 よくがんばったね！';
+    document.getElementById('writing-result-subtitle').textContent = '手書きでしっかり身についたね！';
+  } else {
+    document.getElementById('writing-result-title').textContent = '💪 書き取り完了！';
+    document.getElementById('writing-result-subtitle').textContent = 'なんども書いておぼえよう！';
+  }
+
+  showScreen('screen-writing-result');
+}
+
+// =============================================
 //  CHARACTER TUTORIAL / GUIDE MODULE (ホウホウ博士)
 // =============================================
 const CharacterGuide = (() => {
@@ -3399,6 +3750,76 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('button')) return;
     openTypingStart();
   });
+
+  // ✍️ 漢字書き取りポータルカード
+  const portalWritingBtn = document.getElementById('btn-portal-writing');
+  if (portalWritingBtn) portalWritingBtn.addEventListener('click', openWritingStart);
+  const cardWriting = document.getElementById('card-subject-writing');
+  if (cardWriting) cardWriting.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    openWritingStart();
+  });
+
+  // ✍️ 漢字書き取りスタート画面
+  const writingStartBack = document.getElementById('btn-writing-start-back');
+  if (writingStartBack) writingStartBack.addEventListener('click', renderPortalScreen);
+
+  const writingStartGo = document.getElementById('btn-writing-start-go');
+  if (writingStartGo) writingStartGo.addEventListener('click', startWritingQuiz);
+
+  // 問題数セレクター
+  document.querySelectorAll('.writing-count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.writing-count-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      writingSelectedCount = parseInt(btn.dataset.count) || 5;
+    });
+  });
+
+  // ✍️ 漢字書き取りクイズ画面
+  const writingQuizQuit = document.getElementById('btn-writing-quiz-quit');
+  if (writingQuizQuit) writingQuizQuit.addEventListener('click', renderPortalScreen);
+
+  // キャンバスツールボタン
+  const toolPencil = document.getElementById('btn-tool-pencil');
+  if (toolPencil) toolPencil.addEventListener('click', () => WritingCanvas.setTool('pencil'));
+
+  const toolRedPen = document.getElementById('btn-tool-redpen');
+  if (toolRedPen) toolRedPen.addEventListener('click', () => WritingCanvas.setTool('redpen'));
+
+  const toolEraser = document.getElementById('btn-tool-eraser');
+  if (toolEraser) toolEraser.addEventListener('click', () => WritingCanvas.setTool('eraser'));
+
+  const toolUndo = document.getElementById('btn-tool-undo');
+  if (toolUndo) toolUndo.addEventListener('click', () => WritingCanvas.undo());
+
+  const toolClear = document.getElementById('btn-tool-clear');
+  if (toolClear) toolClear.addEventListener('click', () => WritingCanvas.clear());
+
+  // 答え合わせ ＆ 採点
+  const btnCheckAnswer = document.getElementById('btn-writing-check-answer');
+  if (btnCheckAnswer) btnCheckAnswer.addEventListener('click', checkWritingAnswer);
+
+  const toggleOverlay = document.getElementById('check-toggle-overlay');
+  if (toggleOverlay) {
+    toggleOverlay.addEventListener('change', (e) => {
+      const overlay = document.getElementById('writing-sample-overlay');
+      if (overlay) overlay.style.display = e.target.checked ? 'flex' : 'none';
+    });
+  }
+
+  const btnGradeCorrect = document.getElementById('btn-grade-correct');
+  if (btnGradeCorrect) btnGradeCorrect.addEventListener('click', () => handleWritingGrading(true));
+
+  const btnGradeRetry = document.getElementById('btn-grade-retry');
+  if (btnGradeRetry) btnGradeRetry.addEventListener('click', () => handleWritingGrading(false));
+
+  // ✍️ 漢字書き取り結果画面
+  const btnWritingRetry = document.getElementById('btn-writing-result-retry');
+  if (btnWritingRetry) btnWritingRetry.addEventListener('click', startWritingQuiz);
+
+  const btnWritingHome = document.getElementById('btn-writing-result-home');
+  if (btnWritingHome) btnWritingHome.addEventListener('click', renderPortalScreen);
 
   // 漢字スタート画面の戻るボタン（ポータルへ）
   document.getElementById('btn-start-back-portal').addEventListener('click', renderPortalScreen);
