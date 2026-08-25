@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん18 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん19 🌸</span>
       </div>
     </div>
   </div>
@@ -236,6 +236,37 @@
         </div>
       </div>
 
+      <!-- 🪙 今日のポイント残枠 ＆ 今月のポイント上限バナー -->
+      <div class="portal-limits-banner pop-card" id="portal-limits-banner">
+        <div class="limit-box today-limit-box">
+          <div class="limit-box-header">
+            <span class="limit-icon">📅</span>
+            <span class="limit-title">きょうの残枠</span>
+            <span class="limit-badge-max">1日上限 <strong id="portal-limit-today-max">50</strong>pt</span>
+          </div>
+          <div class="limit-progress-row">
+            <div class="limit-bar-bg">
+              <div id="portal-limit-today-bar" class="limit-bar-fill today" style="width:100%;"></div>
+            </div>
+            <div class="limit-num-text">あと <strong id="portal-limit-today-remain">50</strong> pt</div>
+          </div>
+        </div>
+
+        <div class="limit-box month-limit-box">
+          <div class="limit-box-header">
+            <span class="limit-icon">🗓️</span>
+            <span class="limit-title">こん月の残枠</span>
+            <span class="limit-badge-max">月間上限 <strong id="portal-limit-month-max">1000</strong>pt</span>
+          </div>
+          <div class="limit-progress-row">
+            <div class="limit-bar-bg">
+              <div id="portal-limit-month-bar" class="limit-bar-fill month" style="width:100%;"></div>
+            </div>
+            <div class="limit-num-text">あと <strong id="portal-limit-month-remain">1000</strong> pt</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 科目選択グリッド -->
       <div class="portal-title-area">
         <h2 class="portal-heading">✨ きょうは何をべんきょうする？</h2>
@@ -247,7 +278,7 @@
         <div class="subject-card pop-card subject-kanji" id="card-subject-kanji">
           <div class="subject-card-header">
             <span class="subject-badge">📚 国語</span>
-            <span class="subject-points-hint">🪙 1〜3pt</span>
+            <span class="subject-points-hint">🪙 0.5pt/問</span>
           </div>
           <div class="subject-icon pop-bounce">漢</div>
           <h3 class="subject-title">漢字ドリル</h3>
@@ -266,7 +297,7 @@
         <div class="subject-card pop-card subject-writing" id="card-subject-writing">
           <div class="subject-card-header">
             <span class="subject-badge writing">✍️ 書き取り</span>
-            <span class="subject-points-hint">🪙 2〜4pt</span>
+            <span class="subject-points-hint">🪙 1.0pt/問</span>
           </div>
           <div class="subject-icon pop-bounce">✍️</div>
           <h3 class="subject-title">漢字書き取り</h3>
@@ -284,7 +315,7 @@
         <div class="subject-card pop-card subject-math" id="card-subject-math">
           <div class="subject-card-header">
             <span class="subject-badge math">🔢 算数</span>
-            <span class="subject-points-hint">🪙 1〜3pt</span>
+            <span class="subject-points-hint">🪙 1.0pt/問</span>
           </div>
           <div class="subject-icon pop-bounce">➕</div>
           <h3 class="subject-title">算数クエスト</h3>
@@ -302,7 +333,7 @@
         <div class="subject-card pop-card subject-typing" id="card-subject-typing">
           <div class="subject-card-header">
             <span class="subject-badge typing">⌨️ タイピング</span>
-            <span class="subject-points-hint">🪙 2〜5pt</span>
+            <span class="subject-points-hint">🪙 0.3〜0.8pt</span>
           </div>
           <div class="subject-icon pop-bounce">⌨️</div>
           <h3 class="subject-title">ローマ字タイピング</h3>
@@ -318,7 +349,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん18 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん19 🌸</span>
       </div>
     </div>
   </div>
@@ -427,6 +458,9 @@
         </div>
       </div>
       <div class="header-right-stats">
+        <button id="btn-quiz-skip" class="btn-skip-pill" title="この問題をスキップ（ペナルティなし）">
+          <span>⏭️</span> スキップ
+        </button>
         <div class="score-display pop-score-pill">
           <span class="score-star">⭐</span>
           <span id="score-correct" class="score-num correct">0</span>
@@ -595,6 +629,9 @@
           <span class="q-num-total" id="math-q-total">10</span>
         </div>
         <div class="quiz-top-right">
+          <button id="btn-math-skip" class="btn-skip-pill" title="この問題をスキップ（ペナルティなし）">
+            <span>⏭️</span> スキップ
+          </button>
           <span class="quiz-mode-pill math" id="math-quiz-mode-tag">🔢 算数</span>
           <span class="session-points-pill" id="math-session-points-pill">🪙 +<span id="math-session-points">0</span>pt</span>
         </div>
@@ -798,7 +835,7 @@
       <div class="start-features-hint">
         <span>✨ 柔軟なローマ字入力</span>
         <span>🖐️ ホームポジションガイド</span>
-        <span>🪙 2〜5pt獲得</span>
+        <span>🪙 難易度に応じたポイント獲得</span>
       </div>
     </div>
   </div>
@@ -807,15 +844,18 @@
   <div id="screen-typing-quiz" class="screen">
     <div class="typing-quiz-container" id="typing-quiz-container">
       <div class="quiz-top-bar">
-        <button id="btn-typing-quit" class="btn-pop-small-ghost" aria-label="やめる">✕ やめる</button>
-        <div class="quiz-q-counter">
-          <span class="q-num-current" id="typing-q-current">1</span>
-          <span class="q-num-slash">/</span>
-          <span class="q-num-total" id="typing-q-total">8</span>
-        </div>
-        <div class="quiz-top-right">
+        <div class="typing-top-left">
           <span class="quiz-mode-pill typing" id="typing-quiz-world-tag">🧁 ちいかわ</span>
           <span class="session-points-pill" id="typing-session-points-pill">🪙 +<span id="typing-session-points">0</span>pt</span>
+        </div>
+        <div class="typing-top-right">
+          <button id="btn-typing-skip" class="btn-skip-pill" title="このお題をスキップ（ペナルティなし）">
+            <span>⏭️</span> スキップ
+          </button>
+          <div class="typing-combo-badge pop-bounce" id="typing-combo-badge" style="display:none;">
+            🔥 <span id="typing-combo-num">0</span> COMBO!
+          </div>
+          <button id="btn-typing-quit" class="btn-pop-ghost btn-quit" aria-label="終了する">✕ やめる</button>
         </div>
       </div>
 
@@ -830,9 +870,6 @@
           <div class="typing-char-box" id="typing-char-box">
             <span class="typing-char-emoji" id="typing-char-emoji">🧁</span>
             <div class="typing-speech-bubble" id="typing-speech-bubble">タイピングスタート！</div>
-          </div>
-          <div class="typing-streak-counter" id="typing-streak-counter">
-            <span class="streak-num" id="typing-combo-num">0</span> COMBO!
           </div>
         </div>
 
@@ -1043,9 +1080,14 @@
           <span class="quiz-step" id="writing-quiz-step">第 1 問 / 10問</span>
           <span class="quiz-grade-tag" id="writing-quiz-grade-tag">5年生の漢字</span>
         </div>
-        <button id="btn-writing-quiz-quit" class="btn-pop-ghost btn-quit" aria-label="終了する">
-          ✕ やめる
-        </button>
+        <div class="writing-top-right-actions">
+          <button id="btn-writing-skip" class="btn-skip-pill" title="この問題をスキップ（ペナルティなし）">
+            <span>⏭️</span> スキップ
+          </button>
+          <button id="btn-writing-quiz-quit" class="btn-pop-ghost btn-quit" aria-label="終了する">
+            ✕ やめる
+          </button>
+        </div>
       </div>
 
       <!-- プログレスバー -->

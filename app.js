@@ -817,6 +817,33 @@ function renderPortalScreen() {
     banner.style.display = 'none';
   }
 
+  // 🪙 今日のポイント残枠 ＆ 今月のポイント上限バナー更新
+  checkAndResetLimits(acc);
+  const limits = acc.monthlyLimits || getDefaultLimits();
+  const maxToday = limits.maxDaily || 50;
+  const earnedToday = limits.todayEarned || 0;
+  const remainToday = Math.max(0, Math.round((maxToday - earnedToday) * 100) / 100);
+  const pctToday = Math.min(100, Math.max(0, Math.round((remainToday / maxToday) * 100)));
+
+  const maxMonth = limits.maxMonthly || 1000;
+  const earnedMonth = limits.monthlyEarned || 0;
+  const remainMonth = Math.max(0, Math.round((maxMonth - earnedMonth) * 100) / 100);
+  const pctMonth = Math.min(100, Math.max(0, Math.round((remainMonth / maxMonth) * 100)));
+
+  const todayMaxEl = document.getElementById('portal-limit-today-max');
+  const todayRemainEl = document.getElementById('portal-limit-today-remain');
+  const todayBarEl = document.getElementById('portal-limit-today-bar');
+  if (todayMaxEl) todayMaxEl.textContent = formatPoints(maxToday);
+  if (todayRemainEl) todayRemainEl.textContent = formatPoints(remainToday);
+  if (todayBarEl) todayBarEl.style.width = pctToday + '%';
+
+  const monthMaxEl = document.getElementById('portal-limit-month-max');
+  const monthRemainEl = document.getElementById('portal-limit-month-remain');
+  const monthBarEl = document.getElementById('portal-limit-month-bar');
+  if (monthMaxEl) monthMaxEl.textContent = formatPoints(maxMonth);
+  if (monthRemainEl) monthRemainEl.textContent = formatPoints(remainMonth);
+  if (monthBarEl) monthBarEl.style.width = pctMonth + '%';
+
   showScreen('screen-portal');
 }
 
@@ -1786,35 +1813,33 @@ function buildQuiz(count, isWeakOnly = false) {
 }
 
 // =============================================
-//  DIFFICULTY & POINT CALCULATION
+//  DIFFICULTY & POINT CALCULATION (漢字読みクイズ: 基本0.5pt)
 // =============================================
 function calcQuestionPoint(q) {
-  const text = q.question;
-  const hasBrackets = text.includes('【') && text.includes('】');
-  let basePoints = 1;
-  let label = '正解で +1pt';
-  let badgeClass = 'bronze';
-
-  if (hasBrackets || text.length >= 4) {
-    basePoints = 3;
-    label = '正解で +3pt';
-    badgeClass = 'gold';
-  } else if (text.length >= 2) {
-    basePoints = 2;
-    label = '正解で +2pt';
-    badgeClass = 'silver';
-  }
-
-  const bonus = q.isWeakRevenge ? 2 : 0;
-  const total = basePoints + bonus;
+  const basePoints = 0.5;
+  const bonus = q.isWeakRevenge ? 0.5 : 0;
+  const total = Math.round((basePoints + bonus) * 100) / 100;
 
   return {
     basePoints,
     bonus,
     total,
-    label: bonus > 0 ? `正解で +${total}pt (克服ボーナス+2!)` : label,
-    badgeClass: bonus > 0 ? 'gold' : badgeClass
+    label: bonus > 0 ? `正解で +${total}pt (克服ボーナス+0.5!)` : `正解で +${basePoints}pt`,
+    badgeClass: bonus > 0 ? 'gold' : 'bronze'
   };
+}
+
+function skipQuizQuestion() {
+  if (answered) return;
+  SoundFx.playTap();
+  currentIndex++;
+  if (currentIndex < quizQuestions.length) {
+    renderQuestion();
+  } else {
+    const bar = document.getElementById('progress-bar');
+    if (bar) bar.style.width = '100%';
+    setTimeout(() => showResult(), 300);
+  }
 }
 
 let sessionEarnedPoints = 0;
@@ -2387,6 +2412,19 @@ function submitMathAnswer() {
   }, 1200);
 }
 
+function skipMathQuestion() {
+  if (mathAnswered) return;
+  SoundFx.playTap();
+  mathCurrentIndex++;
+  if (mathCurrentIndex < mathQuestions.length) {
+    renderMathQuestion();
+  } else {
+    const bar = document.getElementById('math-progress-bar');
+    if (bar) bar.style.width = '100%';
+    setTimeout(() => showMathResult(), 300);
+  }
+}
+
 function showMathResult() {
   const total = mathQuestions.length;
   const pct = Math.round((mathScore / total) * 100);
@@ -2506,9 +2544,9 @@ function showMathResult() {
 //  TYPING PRACTICE MODULE (ローマ字タイピング練習)
 // =============================================
 const TYPING_POINT_TABLE = {
-  easy:   { S: 0.8, A: 0.5, B: 0.2, C: 0 },
-  normal: { S: 1.2, A: 0.8, B: 0.4, C: 0 },
-  hard:   { S: 1.8, A: 1.4, B: 0.8, C: 0 },
+  easy:   { S: 0.4, A: 0.3, B: 0.2, C: 0 },
+  normal: { S: 0.6, A: 0.5, B: 0.3, C: 0 },
+  hard:   { S: 0.8, A: 0.6, B: 0.4, C: 0 },
 };
 
 const TYPING_COURSE_NAMES = {
@@ -2801,6 +2839,17 @@ function handleQuestionComplete() {
     isTypingInputBlocked = false;
     setupTypingQuestion();
   }, 700);
+}
+
+function skipTypingQuestion() {
+  SoundFx.playTap();
+  typingCurrentIndex++;
+  isTypingInputBlocked = false;
+  if (typingCurrentIndex < typingQuizList.length) {
+    setupTypingQuestion();
+  } else {
+    finishTypingQuiz();
+  }
 }
 
 function finishTypingQuiz() {
@@ -3263,7 +3312,7 @@ function handleWritingGrading(isCorrect) {
   if (isCorrect) {
     SoundFx.playCorrect();
     writingCorrectCount++;
-    const pts = 2.0; // 1問 2.0pt
+    const pts = 1.0; // 1問 1.0pt
     writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
   } else {
     SoundFx.playWrong();
@@ -3288,6 +3337,18 @@ function handleWritingGrading(isCorrect) {
     renderWritingQuestion();
   } else {
     document.getElementById('writing-quiz-progress-bar').style.width = '100%';
+    setTimeout(() => showWritingResult(), 300);
+  }
+}
+
+function skipWritingQuestion() {
+  SoundFx.playTap();
+  writingCurrentIndex++;
+  if (writingCurrentIndex < writingQuestions.length) {
+    renderWritingQuestion();
+  } else {
+    const bar = document.getElementById('writing-quiz-progress-bar');
+    if (bar) bar.style.width = '100%';
     setTimeout(() => showWritingResult(), 300);
   }
 }
@@ -3780,6 +3841,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const writingQuizQuit = document.getElementById('btn-writing-quiz-quit');
   if (writingQuizQuit) writingQuizQuit.addEventListener('click', renderPortalScreen);
 
+  const writingSkipBtn = document.getElementById('btn-writing-skip');
+  if (writingSkipBtn) writingSkipBtn.addEventListener('click', skipWritingQuestion);
+
   // キャンバスツールボタン
   const toolPencil = document.getElementById('btn-tool-pencil');
   if (toolPencil) toolPencil.addEventListener('click', () => WritingCanvas.setTool('pencil'));
@@ -3821,6 +3885,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnWritingHome = document.getElementById('btn-writing-result-home');
   if (btnWritingHome) btnWritingHome.addEventListener('click', renderPortalScreen);
 
+  // 漢字クイズ画面イベント
+  const btnQuizSkip = document.getElementById('btn-quiz-skip');
+  if (btnQuizSkip) btnQuizSkip.addEventListener('click', skipQuizQuestion);
+
   // 漢字スタート画面の戻るボタン（ポータルへ）
   document.getElementById('btn-start-back-portal').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-start').addEventListener('click', () => startQuiz(false));
@@ -3838,6 +3906,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-math-home').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-math-retry').addEventListener('click', startMathQuiz);
   document.getElementById('btn-math-start-run').addEventListener('click', startMathQuiz);
+  const btnMathSkip = document.getElementById('btn-math-skip');
+  if (btnMathSkip) btnMathSkip.addEventListener('click', skipMathQuestion);
   document.getElementById('btn-open-wallet-math').addEventListener('click', () => {
     openWalletScreen(currentAccountId);
   });
@@ -3868,6 +3938,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-typing-home').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-typing-retry').addEventListener('click', startTypingGame);
   document.getElementById('btn-typing-start-run').addEventListener('click', startTypingGame);
+  const btnTypingSkip = document.getElementById('btn-typing-skip');
+  if (btnTypingSkip) btnTypingSkip.addEventListener('click', skipTypingQuestion);
   document.getElementById('btn-open-wallet-typing').addEventListener('click', () => {
     openWalletScreen(currentAccountId);
   });

@@ -5109,6 +5109,150 @@ body {
   background: linear-gradient(160deg, #ffffff 0%, #fffdf5 100%);
 }
 
+/* =============================================
+   🪙 PORTAL LIMITS BANNER & SKIP BUTTONS
+   ============================================= */
+
+/* Portal Limits Banner */
+.portal-limits-banner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  border: 1.5px solid #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .portal-limits-banner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.limit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+}
+
+.limit-box.today-limit-box {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #fde68a;
+}
+
+.limit-box.month-limit-box {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #bbf7d0;
+}
+
+.limit-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.limit-icon {
+  font-size: 1.15rem;
+}
+
+.limit-title {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #1e293b;
+  flex-grow: 1;
+}
+
+.limit-badge-max {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.limit-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.limit-bar-bg {
+  flex-grow: 1;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.limit-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+.limit-bar-fill.today {
+  background: linear-gradient(90deg, #f59e0b, #eab308);
+}
+
+.limit-bar-fill.month {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.limit-num-text {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #334155;
+  white-space: nowrap;
+}
+.limit-num-text strong {
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+/* Skip Buttons */
+.btn-skip-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  font-family: var(--font-rounded);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+}
+
+.btn-skip-pill:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+  transform: scale(1.05);
+}
+
+.btn-skip-pill:active {
+  transform: scale(0.96);
+}
+
+.writing-top-right-actions,
+.math-top-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 
 
 
