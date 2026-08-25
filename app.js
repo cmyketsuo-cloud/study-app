@@ -3009,6 +3009,226 @@ window.addEventListener('keydown', (e) => {
 });
 
 // =============================================
+//  CHARACTER TUTORIAL / GUIDE MODULE (ホウホウ博士)
+// =============================================
+const CharacterGuide = (() => {
+  let currentStep = 0;
+  let isSpeaking = false;
+
+  const STEPS = [
+    {
+      stepTag: 'ステップ 1 / 4',
+      title: '🌟 ようこそ！わくわく学習アプリへ！',
+      voiceText: 'ようこそ！わくわく学習アプリへ！ぼくはホウホウ博士じゃよ！まずは自分の名前をえらんでスタートしよう！',
+      html: `
+        <p class="g-lead">ぼくは学習アプリの案内役、<strong>「ホウホウ博士」</strong>じゃよ！🦉✨</p>
+        <div class="g-card-item">
+          <span class="g-item-icon">👤</span>
+          <div class="g-item-text">
+            <strong>まずは自分のアカウントをえらぼう！</strong><br>
+            カードを押すだけで始められるぞ。右上の歯車ボタン ⚙️ から、<strong>好きな色</strong>や<strong>可愛いアバター写真</strong>に変更できるんじゃ！
+          </div>
+        </div>
+      `
+    },
+    {
+      stepTag: 'ステップ 2 / 4',
+      title: '📚 3つの科目にチャレンジ！',
+      voiceText: '3つの科目を楽しくマスターしよう！漢字ドリル、算数クエスト、ローマ字タイピングがあるぞ！',
+      html: `
+        <div class="g-subjects-grid">
+          <div class="g-subject-pill kanji">
+            <span class="g-pill-icon">🌸</span>
+            <div><strong>漢字ドリル</strong><br><small>4択クイズ！満点で花火が上がるぞ！</small></div>
+          </div>
+          <div class="g-subject-pill math">
+            <span class="g-pill-icon">🔢</span>
+            <div><strong>算数クエスト</strong><br><small>ノートで計算してテンキー入力！</small></div>
+          </div>
+          <div class="g-subject-pill typing">
+            <span class="g-pill-icon">⌨️</span>
+            <div><strong>ローマ字タイピング</strong><br><small>指ガイド付き特訓！「激ムズ」で高得点！</small></div>
+          </div>
+        </div>
+      `
+    },
+    {
+      stepTag: 'ステップ 3 / 4',
+      title: '🪙 ポイントをためてご褒美をゲット！',
+      voiceText: '正解するとポイントが貯まるぞ！ポイント通帳でほしい本を登録したり、お小遣いや本に交換できるんじゃ！',
+      html: `
+        <div class="g-card-item">
+          <span class="g-item-icon">💰</span>
+          <div class="g-item-text">
+            <strong>ポイント通帳を見てみよう！</strong><br>
+            正解するとポイントがどんどん貯まるぞ！お小遣いに交換したり、<strong>バリューブックス為替ボーナス</strong>で欲しい本を買ってもらおう！
+          </div>
+        </div>
+        <div class="g-card-item">
+          <span class="g-item-icon">📖</span>
+          <div class="g-item-text">
+            <strong>「ほしい本」を登録できる！</strong><br>
+            目標の本を登録すると、達成まであと何ポイントかプログレスバーで見えるんじゃ！
+          </div>
+        </div>
+      `
+    },
+    {
+      stepTag: 'ステップ 4 / 4',
+      title: '🔥 まちがえても大丈夫！にがて克服！',
+      voiceText: '間違えた問題は自動で覚えてくれるぞ！苦手特訓で復習して、キラキラ花火でお祝いしよう！',
+      html: `
+        <div class="g-card-item">
+          <span class="g-item-icon">💡</span>
+          <div class="g-item-text">
+            <strong>にがてな問題を自動でおぼえるよ！</strong><br>
+            まちがえた問題は「にがて」として重点的に出題されるぞ。
+          </div>
+        </div>
+        <div class="g-card-item">
+          <span class="g-item-icon">🎉</span>
+          <div class="g-item-text">
+            <strong>「にがて特訓」で克服！</strong><br>
+            リベンジして正解すると「💮 こくふく！」達成！ボーナスポイントとキラキラ星花火が上がるぞ！毎日楽しく学ぼう！
+          </div>
+        </div>
+      `
+    }
+  ];
+
+  function open() {
+    SoundFx.playTap();
+    currentStep = 0;
+    renderStep();
+    const modal = document.getElementById('modal-character-guide');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function close() {
+    stopVoice();
+    SoundFx.playTap();
+    const modal = document.getElementById('modal-character-guide');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function renderStep() {
+    stopVoice();
+    const step = STEPS[currentStep];
+    if (!step) return;
+
+    document.getElementById('guide-step-tag').textContent = step.stepTag;
+    document.getElementById('guide-title').textContent = step.title;
+    document.getElementById('guide-text-body').innerHTML = step.html;
+
+    // ドット
+    document.querySelectorAll('.g-dot').forEach((dot, idx) => {
+      dot.classList.toggle('active', idx === currentStep);
+    });
+
+    // まえへボタン
+    const prevBtn = document.getElementById('btn-guide-prev');
+    if (prevBtn) prevBtn.style.display = currentStep > 0 ? 'inline-block' : 'none';
+
+    // つぎへ / 完了ボタン
+    const nextBtn = document.getElementById('btn-guide-next');
+    if (nextBtn) {
+      if (currentStep === STEPS.length - 1) {
+        nextBtn.innerHTML = '🌟 わかった！（はじめる）';
+      } else {
+        nextBtn.innerHTML = 'つぎへ ▶';
+      }
+    }
+  }
+
+  function next() {
+    SoundFx.playTap();
+    if (currentStep < STEPS.length - 1) {
+      currentStep++;
+      renderStep();
+    } else {
+      ConfettiFx.launch(50);
+      close();
+    }
+  }
+
+  function prev() {
+    SoundFx.playTap();
+    if (currentStep > 0) {
+      currentStep--;
+      renderStep();
+    }
+  }
+
+  function goToStep(idx) {
+    if (idx >= 0 && idx < STEPS.length) {
+      SoundFx.playTap();
+      currentStep = idx;
+      renderStep();
+    }
+  }
+
+  function toggleVoice() {
+    if (isSpeaking) {
+      stopVoice();
+    } else {
+      playVoice();
+    }
+  }
+
+  function playVoice() {
+    if (!('speechSynthesis' in window)) {
+      alert('お使いの端末は音声読み上げに対応していません。');
+      return;
+    }
+    const step = STEPS[currentStep];
+    if (!step) return;
+
+    window.speechSynthesis.cancel();
+    const uttr = new SpeechSynthesisUtterance(step.voiceText);
+    uttr.lang = 'ja-JP';
+    uttr.pitch = 1.25;
+    uttr.rate = 0.95;
+
+    const voiceBtn = document.getElementById('btn-guide-voice');
+    const voiceText = document.getElementById('guide-voice-text');
+
+    uttr.onstart = () => {
+      isSpeaking = true;
+      if (voiceBtn) voiceBtn.classList.add('speaking');
+      if (voiceText) voiceText.textContent = 'ていし';
+    };
+
+    uttr.onend = uttr.onerror = () => {
+      isSpeaking = false;
+      if (voiceBtn) voiceBtn.classList.remove('speaking');
+      if (voiceText) voiceText.textContent = 'こえできく';
+    };
+
+    window.speechSynthesis.speak(uttr);
+  }
+
+  function stopVoice() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    isSpeaking = false;
+    const voiceBtn = document.getElementById('btn-guide-voice');
+    const voiceText = document.getElementById('guide-voice-text');
+    if (voiceBtn) voiceBtn.classList.remove('speaking');
+    if (voiceText) voiceText.textContent = 'こえできく';
+  }
+
+  return {
+    open,
+    close,
+    next,
+    prev,
+    goToStep,
+    toggleVoice,
+  };
+})();
+
+// =============================================
 //  INITIALIZATION
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -3026,6 +3246,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fetchFxRate();
   renderAccountScreen();
+
+  // キャラクターガイドイベント
+  const guideOpenAccBtn = document.getElementById('btn-open-guide-account');
+  if (guideOpenAccBtn) guideOpenAccBtn.addEventListener('click', () => CharacterGuide.open());
+
+  const guideOpenPortalBtn = document.getElementById('btn-open-guide-portal');
+  if (guideOpenPortalBtn) guideOpenPortalBtn.addEventListener('click', () => CharacterGuide.open());
+
+  const guideCloseBtn = document.getElementById('btn-guide-close');
+  if (guideCloseBtn) guideCloseBtn.addEventListener('click', () => CharacterGuide.close());
+
+  const guideNextBtn = document.getElementById('btn-guide-next');
+  if (guideNextBtn) guideNextBtn.addEventListener('click', () => CharacterGuide.next());
+
+  const guidePrevBtn = document.getElementById('btn-guide-prev');
+  if (guidePrevBtn) guidePrevBtn.addEventListener('click', () => CharacterGuide.prev());
+
+  const guideVoiceBtn = document.getElementById('btn-guide-voice');
+  if (guideVoiceBtn) guideVoiceBtn.addEventListener('click', () => CharacterGuide.toggleVoice());
+
+  document.querySelectorAll('.g-dot').forEach((dot, idx) => {
+    dot.addEventListener('click', () => CharacterGuide.goToStep(idx));
+  });
 
   // 設定画面イベント
   document.getElementById('settings-name').addEventListener('input', updateGradePreview);
