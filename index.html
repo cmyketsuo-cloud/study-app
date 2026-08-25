@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="わくわく学習">
+  <meta name="theme-color" content="#ff4b72">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>わくわく学習アプリ｜たのしく学べる漢字・算数・タイピング</title>
+  <meta name="description" content="小学生向けのポップで楽しい漢字読み方クイズアプリ。苦手な問題を重点的に復習できるスマート学習機能つき！">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&family=Noto+Serif+JP:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ========== BACKGROUND POP DECORATIONS ========== -->
+  <div class="pop-bg" aria-hidden="true">
+    <div class="bg-bubble b1"></div>
+    <div class="bg-bubble b2"></div>
+    <div class="bg-bubble b3"></div>
+    <div class="bg-bubble b4"></div>
+    <div class="bg-bubble b5"></div>
+    <div class="floating-kanji k1">漢</div>
+    <div class="floating-kanji k2">字</div>
+    <div class="floating-kanji k3">学</div>
+    <div class="floating-kanji k4">笑</div>
+    <div class="floating-kanji k5">楽</div>
+    <div class="floating-star s1">★</div>
+    <div class="floating-star s2">✨</div>
+    <div class="floating-star s3">★</div>
+    <div class="floating-star s4">🌸</div>
+  </div>
+
+  <!-- 🔊 サウンド切替ボタン (画面右上固定) -->
+  <button id="btn-sound-toggle" class="btn-sound-toggle" title="おと ON / OFF" aria-label="おと ON / OFF">
+    <span id="sound-toggle-icon">🔊</span>
+  </button>
+
+  <!-- 🎉 紙吹雪・星花火 キャンバス -->
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- ========== ACCOUNT SCREEN ========== -->
+  <div id="screen-account" class="screen active">
+    <div class="account-screen-inner">
+      <div class="account-title-wrap">
+        <div class="pop-badge-pill">✨ わくわく学習アプリ ✨</div>
+        <h1 class="account-heading">
+          <span class="sparkle-icon">🌟</span>
+          だれがやる？
+          <span class="sparkle-icon">🌟</span>
+        </h1>
+        <p class="account-subtext">じぶんのアカウントをえらんでね！</p>
+      </div>
+
+      <div class="account-grid" id="account-grid">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="pop-bottom-note">
+        <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
+        <span class="cute-version-badge">🌸 ばーじょん16 🌸</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SETTINGS SCREEN ========== -->
+  <div id="screen-settings" class="screen">
+    <div class="settings-wrap">
+      <button id="btn-settings-back" class="btn-pop-back" aria-label="もどる">
+        ← もどる
+      </button>
+      <div class="settings-card pop-card">
+        <div class="settings-avatar-wrap">
+          <div class="settings-avatar-container">
+            <div class="settings-avatar pop-bounce" id="settings-avatar">
+              <img id="settings-avatar-photo" class="settings-avatar-photo" src="" alt="" style="display:none;">
+              <span id="settings-avatar-text">？</span>
+            </div>
+            <button class="settings-avatar-edit-btn" id="btn-avatar-edit" title="アイコンを変える">✏️</button>
+          </div>
+        </div>
+        <h2 class="settings-title">プロフィールのせってい</h2>
+
+        <div class="settings-form">
+          <div class="form-group">
+            <label class="form-label" for="settings-name">
+              <span class="label-icon">📛</span> おなまえ
+            </label>
+            <input
+              type="text"
+              id="settings-name"
+              class="form-input pop-input"
+              placeholder="例: たろう"
+              maxlength="10"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="settings-birthyear">
+              <span class="label-icon">🎂</span> 生まれた年（西暦）
+            </label>
+            <input
+              type="number"
+              id="settings-birthyear"
+              class="form-input pop-input"
+              placeholder="例: 2017"
+              min="2005"
+              max="2026"
+            >
+          </div>
+
+          <div class="grade-preview-wrap pop-preview-box" id="grade-preview-wrap">
+            <span class="grade-preview-label">判定された学年：</span>
+            <span id="settings-grade-preview" class="grade-preview-value">---</span>
+          </div>
+
+          <div class="weak-stats-box pop-preview-box" id="settings-weak-box">
+            <span class="grade-preview-label">🔥 にがてな問題：</span>
+            <span id="settings-weak-count" class="weak-count-value">0問</span>
+          </div>
+
+          <!-- ===== テーマカラー選択 ===== -->
+          <div class="form-group">
+            <label class="form-label">
+              <span class="label-icon">🎨</span> テーマカラー
+            </label>
+            <div class="color-palette" id="color-palette">
+              <button class="color-swatch" data-color="#ff4b72" style="background:#ff4b72" title="いちご" aria-label="いちご"></button>
+              <button class="color-swatch" data-color="#ff8800" style="background:#ff8800" title="みかん" aria-label="みかん"></button>
+              <button class="color-swatch" data-color="#f59e0b" style="background:#f59e0b" title="ひまわり" aria-label="ひまわり"></button>
+              <button class="color-swatch" data-color="#10b981" style="background:#10b981" title="みどり" aria-label="みどり"></button>
+              <button class="color-swatch" data-color="#0284c7" style="background:#0284c7" title="そら" aria-label="そら"></button>
+              <button class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6" title="ぶどう" aria-label="ぶどう"></button>
+              <button class="color-swatch" data-color="#ec4899" style="background:#ec4899" title="さくら" aria-label="さくら"></button>
+              <button class="color-swatch" data-color="#06b6d4" style="background:#06b6d4" title="みずいろ" aria-label="みずいろ"></button>
+              <button class="color-swatch" data-color="#d97706" style="background:#d97706" title="ゴールド" aria-label="ゴールド"></button>
+              <button class="color-swatch" data-color="#059669" style="background:#059669" title="エメラルド" aria-label="エメラルド"></button>
+              <button class="color-swatch" data-color="#7c3aed" style="background:#7c3aed" title="パープル" aria-label="パープル"></button>
+              <button class="color-swatch" data-color="#374151" style="background:#374151" title="くろ" aria-label="くろ"></button>
+            </div>
+          </div>
+
+          <!-- ===== アバターアイコン選択 ===== -->
+          <div class="form-group">
+            <label class="form-label">
+              <span class="label-icon">🖼️</span> アイコン
+            </label>
+            <div class="avatar-emoji-grid" id="avatar-emoji-grid">
+              <button class="avatar-emoji-btn" data-emoji="🐱" aria-label="ねこ">🐱</button>
+              <button class="avatar-emoji-btn" data-emoji="🐶" aria-label="いぬ">🐶</button>
+              <button class="avatar-emoji-btn" data-emoji="🐼" aria-label="パンダ">🐼</button>
+              <button class="avatar-emoji-btn" data-emoji="🐰" aria-label="うさぎ">🐰</button>
+              <button class="avatar-emoji-btn" data-emoji="🦊" aria-label="きつね">🦊</button>
+              <button class="avatar-emoji-btn" data-emoji="🐻" aria-label="くま">🐻</button>
+              <button class="avatar-emoji-btn" data-emoji="🦁" aria-label="ライオン">🦁</button>
+              <button class="avatar-emoji-btn" data-emoji="🐨" aria-label="コアラ">🐨</button>
+              <button class="avatar-emoji-btn" data-emoji="🐸" aria-label="カエル">🐸</button>
+              <button class="avatar-emoji-btn" data-emoji="🐧" aria-label="ペンギン">🐧</button>
+              <button class="avatar-emoji-btn" data-emoji="🦄" aria-label="ユニコーン">🦄</button>
+              <button class="avatar-emoji-btn" data-emoji="⭐" aria-label="スター">⭐</button>
+            </div>
+            <!-- 写真ボタン -->
+            <label class="btn-avatar-photo-label" id="label-avatar-photo" for="input-avatar-photo">
+              📸 カメラ / 写真ライブラリから選ぶ
+            </label>
+            <input type="file" id="input-avatar-photo" accept="image/*" capture="user" style="display:none;">
+            <button class="btn-avatar-photo-clear" id="btn-avatar-photo-clear" style="display:none;">🗑 写真をけす</button>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button id="btn-settings-save" class="btn-pop-primary">
+            <span>💾</span> ほぞんする！
+          </button>
+          <button id="btn-settings-reset-weak" class="btn-pop-outline">
+            <span>🔄</span> にがて履歴をリセット
+          </button>
+          <button id="btn-settings-delete" class="btn-pop-danger">
+            <span>🗑</span> このアカウントをけす
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PORTAL SCREEN (総合学習ポータル・科目選択) ========== -->
+  <div id="screen-portal" class="screen">
+    <div class="portal-wrap">
+      <!-- ポータルヘッダー -->
+      <header class="portal-header pop-glass">
+        <button id="btn-portal-change-account" class="btn-pop-small-ghost">
+          <span>👤</span> アカウント切替
+        </button>
+        <div class="portal-account-badge">
+          <span class="portal-avatar-letter" id="portal-avatar-letter">た</span>
+          <span class="portal-account-name" id="portal-account-name">たろう</span>
+          <span class="portal-grade-pill" id="portal-grade-pill">5年生</span>
+        </div>
+        <button id="btn-portal-open-wallet" class="btn-wallet-open">
+          <span>🪙</span> <span id="portal-points-display">0</span> pt ↗
+        </button>
+      </header>
+
+      <!-- ウィッシュリスト・目標バナー（登録中のほしい本があれば表示） -->
+      <div id="portal-wishlist-banner" class="portal-wishlist-banner pop-card" style="display:none;">
+        <div class="wishlist-banner-left">
+          <span class="wishlist-banner-icon">🎯</span>
+          <div class="wishlist-banner-info">
+            <div class="wishlist-banner-title" id="portal-target-book-title">いま目標にしている本</div>
+            <div class="wishlist-banner-progress-wrap">
+              <div class="wishlist-progress-bar-bg">
+                <div id="portal-target-book-bar" class="wishlist-progress-bar-fill" style="width:0%;"></div>
+              </div>
+              <span class="wishlist-banner-pct" id="portal-target-book-pct">0%</span>
+            </div>
+          </div>
+        </div>
+        <div class="wishlist-banner-status" id="portal-target-book-status">
+          あと <strong id="portal-target-book-remain">0</strong> 円分
+        </div>
+      </div>
+
+      <!-- 科目選択グリッド -->
+      <div class="portal-title-area">
+        <h2 class="portal-heading">✨ きょうは何をべんきょうする？</h2>
+        <p class="portal-sub">正解するとポイントがたまって、お小遣いや本に交換できるよ！</p>
+      </div>
+
+      <div class="portal-grid">
+        <!-- 📚 国語・漢字ドリル -->
+        <div class="subject-card pop-card subject-kanji" id="card-subject-kanji">
+          <div class="subject-card-header">
+            <span class="subject-badge">📚 国語</span>
+            <span class="subject-points-hint">🪙 1〜3pt</span>
+          </div>
+          <div class="subject-icon pop-bounce">漢</div>
+          <h3 class="subject-title">漢字ドリル</h3>
+          <p class="subject-desc" id="portal-kanji-desc">学年別の漢字・熟語・短文クイズ！にがて克服ボーナスあり！</p>
+          <div class="subject-meta">
+            <span id="portal-kanji-count">📚 180問収録</span>
+            <span id="portal-kanji-mastery-tag" class="subject-mastery-tag">👑 マスター: 0問</span>
+            <span id="portal-kanji-weak-tag" class="subject-weak-tag">🔥 にがて: 0問</span>
+          </div>
+          <button class="btn-subject-start btn-pop-primary" id="btn-portal-kanji">
+            <span>🚀</span> 漢字ドリルをはじめる！
+          </button>
+        </div>
+
+        <!-- 🔢 算数ドリル / クエスト -->
+        <div class="subject-card pop-card subject-math" id="card-subject-math">
+          <div class="subject-card-header">
+            <span class="subject-badge math">🔢 算数</span>
+            <span class="subject-points-hint">🪙 1〜3pt</span>
+          </div>
+          <div class="subject-icon pop-bounce">➕</div>
+          <h3 class="subject-title">算数クエスト</h3>
+          <p class="subject-desc" id="portal-math-desc">学年に合わせた計算・文章題・九九特訓！サクサク電卓入力！</p>
+          <div class="subject-meta">
+            <span id="portal-math-count">🎯 計算・文章題</span>
+            <span class="subject-badge-ready" style="background:#d1fae5;color:#047857;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #6ee7b7;font-size:0.75rem;">⚡ テンキー入力</span>
+          </div>
+          <button class="btn-subject-start btn-pop-primary btn-math-theme" id="btn-portal-math">
+            <span>🚀</span> 算数クエストをはじめる！
+          </button>
+        </div>
+
+        <!-- ⌨️ キーボードタイピング -->
+        <div class="subject-card pop-card subject-typing" id="card-subject-typing">
+          <div class="subject-card-header">
+            <span class="subject-badge typing">⌨️ タイピング</span>
+            <span class="subject-points-hint">🪙 2〜5pt</span>
+          </div>
+          <div class="subject-icon pop-bounce">⌨️</div>
+          <h3 class="subject-title">ローマ字タイピング</h3>
+          <p class="subject-desc">ちいかわ・RPG・スイーツ寿司打の3ワールド！指ガイド付きでサクサク！</p>
+          <div class="subject-meta">
+            <span>🎯 ローマ字・単語</span>
+            <span class="subject-badge-ready" style="background:#fce7f3;color:#be185d;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #fbcfe8;font-size:0.75rem;">🧁 3ワールド選択</span>
+          </div>
+          <button class="btn-subject-start btn-pop-primary btn-typing-theme" id="btn-portal-typing">
+            <span>🚀</span> タイピングをはじめる！
+          </button>
+        </div>
+      </div>
+
+      <div class="portal-footer">
+        <span class="cute-version-badge">🌸 ばーじょん16 🌸</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== START SCREEN (KANJI DRILL) ========== -->
+  <div id="screen-start" class="screen">
+    <div class="start-card pop-card">
+      <button id="btn-start-back-portal" class="btn-pop-back" aria-label="もどる">
+        ← 科目えらびに戻る
+      </button>
+      <div class="start-badge-tag" id="start-badge-tag">文部科学省 学習指導要領 準拠</div>
+      <h1 class="start-title">
+        <span class="grade-label pop-gradient-text" id="grade-label">5年生の</span>
+        <span class="main-title-kanji">漢字ドリル</span>
+      </h1>
+      <p class="start-greeting">
+        <span id="start-account-name" class="start-account-name"></span>
+        <span>こんにちは！</span>
+      </p>
+
+      <!-- 苦手問題バッジステータス -->
+      <div class="start-weak-banner" id="start-weak-banner">
+        <span class="weak-banner-icon" id="weak-banner-icon">🔥</span>
+        <span class="weak-banner-text" id="weak-banner-text">にがてな問題: 0問</span>
+      </div>
+
+      <!-- マスター度（定着度）進捗カード -->
+      <div class="start-mastery-card pop-card-mini" id="start-mastery-card">
+        <div class="mastery-header">
+          <span class="mastery-title">🏆 漢字マスター度</span>
+          <span class="mastery-pct" id="start-mastery-pct">0% (0 / 0問)</span>
+        </div>
+        <div class="mastery-bar-multi">
+          <div class="mastery-seg master" id="m-bar-master" style="width:0%;" title="マスター"></div>
+          <div class="mastery-seg learning" id="m-bar-learning" style="width:0%;" title="学習中"></div>
+          <div class="mastery-seg weak" id="m-bar-weak" style="width:0%;" title="にがて"></div>
+        </div>
+        <div class="mastery-legend">
+          <span class="m-pill master">👑 マスター: <strong id="m-count-master">0</strong></span>
+          <span class="m-pill learning">🌱 おぼえ中: <strong id="m-count-learning">0</strong></span>
+          <span class="m-pill weak">🔥 にがて: <strong id="m-count-weak">0</strong></span>
+          <span class="m-pill unseen">🆕 未挑戦: <strong id="m-count-unseen">0</strong></span>
+        </div>
+      </div>
+
+      <!-- ポイント & 通帳リンクカード -->
+      <div class="start-point-box pop-card-point" id="start-point-box">
+        <div class="point-box-left">
+          <span class="point-coin-icon">🪙</span>
+          <div class="point-box-text">
+            <div class="point-box-label">もっているポイント</div>
+            <div class="point-box-val"><span id="start-points-display">0</span> <small>pt</small></div>
+          </div>
+        </div>
+        <button id="btn-open-wallet-start" class="btn-wallet-open">
+          <span>💰</span> ポイント通帳 ↗
+        </button>
+      </div>
+
+      <div class="mode-selector">
+        <p class="mode-label">🎯 なん問チャレンジする？</p>
+        <div class="mode-buttons" role="group" aria-label="出題数の選択">
+          <button class="mode-btn pop-btn active" data-count="10" id="mode-10">10問</button>
+          <button class="mode-btn pop-btn" data-count="20" id="mode-20">20問</button>
+          <button class="mode-btn pop-btn" data-count="30" id="mode-30">30問</button>
+          <button class="mode-btn pop-btn" data-count="all" id="mode-50">全部！</button>
+        </div>
+      </div>
+
+      <!-- 通常スタートボタン -->
+      <button id="btn-start" class="btn-pop-primary btn-start-huge pop-pulse">
+        <span class="btn-icon">🚀</span>
+        スタート！
+      </button>
+
+      <!-- 苦手特訓ボタン（にがて問題があるときに活躍） -->
+      <button id="btn-start-weak" class="btn-pop-weak" style="display:none;">
+        <span class="btn-icon">🔥</span>
+        にがて特訓モード！ (<span id="weak-btn-count">0</span>問)
+      </button>
+
+      <button id="btn-change-account" class="btn-pop-secondary">
+        <span>👤</span> アカウントをえらびなおす
+      </button>
+
+      <div class="start-footer-info">
+        <span>✨ 4たくクイズ</span>
+        <span>🔥 にがて重点出題</span>
+        <span>🪙 難易度ポイント制</span>
+        <span id="start-q-count-badge">📚 たっぷり収録</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== QUIZ SCREEN ========== -->
+  <div id="screen-quiz" class="screen">
+    <header class="quiz-header pop-glass">
+      <button id="btn-quit" class="btn-quit pop-btn-small" aria-label="終了する">✕ やめる</button>
+      <div class="progress-wrap">
+        <div class="progress-info">
+          第 <span id="q-current">1</span> / <span id="q-total">10</span> 問
+          <span id="quiz-mode-tag" class="quiz-mode-tag">通常</span>
+        </div>
+        <div class="progress-bar-bg" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          <div id="progress-bar" class="progress-bar-fill"></div>
+        </div>
+      </div>
+      <div class="header-right-stats">
+        <div class="score-display pop-score-pill">
+          <span class="score-star">⭐</span>
+          <span id="score-correct" class="score-num correct">0</span>
+          <span class="score-sep">/</span>
+          <span id="score-answered" class="score-num">0</span>
+        </div>
+        <div class="quiz-points-pill" id="quiz-points-pill">
+          <span>🪙</span> <span id="quiz-session-points">0</span> pt
+        </div>
+      </div>
+    </header>
+
+    <main class="quiz-main">
+      <div class="question-area">
+        <!-- 難易度 & 獲得ポイントバッジ + 苦手リベンジバッジ -->
+        <div class="question-badges-wrap">
+          <div id="question-point-badge" class="question-point-badge">
+            <span id="point-badge-coin">🪙</span> <span id="point-badge-text">正解で +1pt</span>
+          </div>
+          <div id="question-weak-badge" class="question-weak-badge pop-bounce" style="display:none;">
+            🔥 にがてリベンジ！(+2ptボーナス)
+          </div>
+        </div>
+
+        <p class="question-label" id="question-label">赤いわくの漢字の「読み方」は？</p>
+        <div class="kanji-card pop-card pop-kanji-box" id="kanji-display">
+          <div id="kanji-char" class="kanji-char-content serif-text">漢</div>
+        </div>
+        <p class="example-sentence" id="example-sentence"></p>
+      </div>
+
+      <div class="choices-grid" id="choices-grid" role="list">
+        <!-- choices injected by JS -->
+      </div>
+
+      <div id="feedback-overlay" class="feedback-overlay" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <!-- ========== RESULT SCREEN ========== -->
+  <div id="screen-result" class="screen">
+    <div class="result-card pop-card">
+      <div id="result-emoji" class="result-emoji pop-bounce">🎉</div>
+      <h2 id="result-title" class="result-title">すごい！</h2>
+      
+      <div class="result-score-block">
+        <div class="score-circle">
+          <svg viewBox="0 0 120 120" class="score-ring">
+            <circle cx="60" cy="60" r="50" class="ring-bg"/>
+            <circle cx="60" cy="60" r="50" class="ring-fill" id="ring-fill"/>
+          </svg>
+          <div class="score-center-text">
+            <span id="result-correct" class="result-big-num">0</span>
+            <span class="result-slash">/ <span id="result-total">10</span></span>
+          </div>
+        </div>
+        <p class="result-percent-label">せいかい率 <strong id="result-percent">0</strong>%</p>
+      </div>
+
+      <!-- ポイント獲得リザルトカード -->
+      <div class="result-point-banner pop-card-point">
+        <div class="result-point-header">
+          <span class="point-star-icon">🪙</span>
+          <span class="result-point-title">今回ゲットしたポイント</span>
+        </div>
+        <div class="result-point-val">+<span id="result-earned-points">0</span> <small>pt 獲得！</small></div>
+        <div id="result-limit-notice" class="result-limit-notice" style="display:none;"></div>
+        <div class="result-point-total-note">
+          合計: <strong id="result-total-points">0</strong> pt（お小遣い <span id="result-cash-equiv">0</span>円 / 本ポイントなら <span id="result-book-equiv">0</span>円分）
+        </div>
+        <button id="btn-open-wallet-result" class="btn-wallet-open full-width">
+          <span>💰</span> ポイント通帳で交換・確認する ↗
+        </button>
+      </div>
+
+      <!-- 今回新しくマスターした漢字ボックス -->
+      <div id="result-mastered-box" class="result-mastered-box" style="display:none;"></div>
+
+      <!-- 今回克服できた問題リスト（ボーナス表示） -->
+      <div id="result-conquered-box" class="result-conquered-box" style="display:none;"></div>
+
+      <div id="result-wrong-list" class="result-wrong-list"></div>
+
+      <div class="result-actions">
+        <button id="btn-retry" class="btn-pop-primary">
+          <span>🔁</span> もう一回やる！
+        </button>
+        <button id="btn-home" class="btn-pop-secondary">
+          <span>🏠</span> さいしょに戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MATH START SCREEN ========== -->
+  <div id="screen-math-start" class="screen">
+    <div class="start-card pop-card math-theme">
+      <button id="btn-math-back-portal" class="btn-pop-back" aria-label="もどる">
+        ← 科目えらびに戻る
+      </button>
+      <div class="start-badge-tag" id="math-start-badge-tag">文部科学省 学習指導要領 準拠</div>
+      <h1 class="start-title">
+        <span class="grade-label pop-gradient-text-math" id="math-grade-label">5年生の</span>
+        <span class="main-title-math">算数クエスト</span>
+      </h1>
+      <p class="start-greeting">
+        <span id="math-start-account-name" class="start-account-name"></span>
+        <span>計算マスターを目指そう！</span>
+      </p>
+
+      <!-- 算数学習概要カード -->
+      <div class="math-overview-card pop-card-mini">
+        <div class="math-overview-header">
+          <span class="math-icon">🔢</span>
+          <div class="math-overview-text">
+            <h4 class="math-overview-title" id="math-grade-title">5年生の計算メニュー</h4>
+            <p class="math-overview-desc" id="math-grade-desc">小数の計算・平均・割合など、手元のノートで計算して答えを入力しよう！</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ポイント & 通帳リンクカード -->
+      <div class="start-point-box pop-card-point" id="math-start-point-box">
+        <div class="point-box-left">
+          <span class="point-coin-icon">🪙</span>
+          <div class="point-box-text">
+            <div class="point-box-label">もっているポイント</div>
+            <div class="point-box-val"><span id="math-start-points-display">0</span> <small>pt</small></div>
+          </div>
+        </div>
+        <button id="btn-open-wallet-math" class="btn-wallet-open">
+          <span>💰</span> ポイント通帳 ↗
+        </button>
+      </div>
+
+      <div class="mode-selector">
+        <p class="mode-label">🎯 なん問チャレンジする？</p>
+        <div class="mode-buttons" role="group" aria-label="出題数の選択">
+          <button class="mode-btn pop-btn math-mode-btn active" data-count="10" id="math-mode-10">10問</button>
+          <button class="mode-btn pop-btn math-mode-btn" data-count="20" id="math-mode-20">20問</button>
+        </div>
+      </div>
+
+      <div class="start-action-wrap">
+        <button id="btn-math-start-run" class="btn-pop-primary btn-math-theme">
+          <span>🚀</span> 算数スタート！
+        </button>
+      </div>
+
+      <div class="start-features-hint">
+        <span>✨ テンキー入力</span>
+        <span>📝 ノートと鉛筆で計算</span>
+        <span>🪙 難易度ポイント制</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MATH QUIZ SCREEN (巨大テンキー付き) ========== -->
+  <div id="screen-math-quiz" class="screen">
+    <div class="math-quiz-container">
+      <div class="quiz-top-bar">
+        <button id="btn-math-quit" class="btn-pop-small-ghost" aria-label="クイズをやめる">✕ やめる</button>
+        <div class="quiz-q-counter">
+          <span class="q-num-current" id="math-q-current">1</span>
+          <span class="q-num-slash">/</span>
+          <span class="q-num-total" id="math-q-total">10</span>
+        </div>
+        <div class="quiz-top-right">
+          <span class="quiz-mode-pill math" id="math-quiz-mode-tag">🔢 算数</span>
+          <span class="session-points-pill" id="math-session-points-pill">🪙 +<span id="math-session-points">0</span>pt</span>
+        </div>
+      </div>
+
+      <div class="quiz-progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+        <div class="quiz-progress-fill math" id="math-progress-bar"></div>
+      </div>
+
+      <!-- 数式・問題カード ＆ テンキーの2カラムレイアウト -->
+      <div class="math-quiz-body">
+        <!-- 左側/上側: 数式・問題文 -->
+        <div class="math-expr-card pop-card">
+          <div class="math-card-header">
+            <span class="math-genre-badge" id="math-genre-badge">基本のたし算</span>
+            <span class="question-point-badge gold" id="math-point-badge">
+              <span>🪙</span> <span id="math-point-badge-text">正解で +2pt</span>
+            </span>
+          </div>
+
+          <div class="math-expr-display" id="math-expr-display">
+            <div class="math-expr-text serif-text" id="math-expr-text">34 + 28</div>
+          </div>
+
+          <p class="math-question-text" id="math-question-text">計算の答えを入力してね！</p>
+          <div class="math-hint-box" id="math-hint-box">💡 意味: 一の位から順番に計算しよう！</div>
+
+          <!-- 入力中の数字表示ボックス -->
+          <div class="math-answer-box">
+            <span class="math-ans-label">あなたの答え:</span>
+            <div class="math-ans-display" id="math-ans-display">
+              <span class="math-ans-val placeholder" id="math-ans-val">?</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右側/下側: iPad最適化 巨大電卓テンキー -->
+        <div class="math-keypad-card pop-card">
+          <div class="math-keypad-grid">
+            <button class="math-key-btn" data-key="7">7</button>
+            <button class="math-key-btn" data-key="8">8</button>
+            <button class="math-key-btn" data-key="9">9</button>
+            <button class="math-key-btn math-key-clear" id="btn-math-ac">AC</button>
+
+            <button class="math-key-btn" data-key="4">4</button>
+            <button class="math-key-btn" data-key="5">5</button>
+            <button class="math-key-btn" data-key="6">6</button>
+            <button class="math-key-btn math-key-back" id="btn-math-back">⌫</button>
+
+            <button class="math-key-btn" data-key="1">1</button>
+            <button class="math-key-btn" data-key="2">2</button>
+            <button class="math-key-btn" data-key="3">3</button>
+            <button class="math-key-btn math-key-dot" data-key=".">.</button>
+
+            <button class="math-key-btn math-key-zero" data-key="0">0</button>
+            <button class="math-key-btn math-key-enter" id="btn-math-enter">
+              <span>決定</span> ↵
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 正解・不正解アニメーションオーバーレイ -->
+      <div id="math-feedback-overlay" class="feedback-overlay" aria-live="assertive"></div>
+    </div>
+  </div>
+
+  <!-- ========== MATH RESULT SCREEN ========== -->
+  <div id="screen-math-result" class="screen">
+    <div class="result-card pop-card math-theme">
+      <div id="math-result-emoji" class="result-emoji pop-bounce">🎉</div>
+      <h2 id="math-result-title" class="result-title">すごい！</h2>
+      
+      <div class="result-score-block">
+        <div class="score-circle">
+          <svg viewBox="0 0 120 120" class="score-ring">
+            <circle cx="60" cy="60" r="50" class="ring-bg"/>
+            <circle cx="60" cy="60" r="50" class="ring-fill math" id="math-ring-fill"/>
+          </svg>
+          <div class="score-center-text">
+            <span id="math-result-correct" class="result-big-num">0</span>
+            <span class="result-slash">/ <span id="math-result-total">10</span></span>
+          </div>
+        </div>
+        <p class="result-percent-label">せいかい率 <strong id="math-result-percent">0</strong>%</p>
+      </div>
+
+      <!-- ポイント獲得リザルトカード -->
+      <div class="result-point-banner pop-card-point">
+        <div class="result-point-header">
+          <span class="point-star-icon">🪙</span>
+          <span class="result-point-title">算数でゲットしたポイント</span>
+        </div>
+        <div class="result-point-val">+<span id="math-result-earned-points">0</span> <small>pt 獲得！</small></div>
+        <div id="math-result-limit-notice" class="result-limit-notice" style="display:none;"></div>
+        <div class="result-point-total-note">
+          合計: <strong id="math-result-total-points">0</strong> pt（お小遣い <span id="math-result-cash-equiv">0</span>円 / 本ポイントなら <span id="math-result-book-equiv">0</span>円分）
+        </div>
+        <button id="btn-open-wallet-math-result" class="btn-wallet-open full-width">
+          <span>💰</span> ポイント通帳で交換・確認する ↗
+        </button>
+      </div>
+
+      <div id="math-result-wrong-list" class="result-wrong-list"></div>
+
+      <div class="result-actions">
+        <button id="btn-math-retry" class="btn-pop-primary btn-math-theme">
+          <span>🔁</span> もう一回やる！
+        </button>
+        <button id="btn-math-home" class="btn-pop-secondary">
+          <span>🏠</span> 科目えらびに戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TYPING START SCREEN ========== -->
+  <div id="screen-typing-start" class="screen">
+    <div class="start-card pop-card typing-theme" id="typing-start-card">
+      <button id="btn-typing-back-portal" class="btn-pop-back" aria-label="もどる">
+        ← 科目えらびに戻る
+      </button>
+      <div class="start-badge-tag" id="typing-start-badge-tag">GIGAスクール・ローマ字特訓</div>
+      <h1 class="start-title">
+        <span class="grade-label pop-gradient-text-typing" id="typing-grade-label">たのしく学べる！</span>
+        <span class="main-title-typing">ローマ字タイピング</span>
+      </h1>
+      <p class="start-greeting">
+        <span id="typing-start-account-name" class="start-account-name"></span>
+        <span>すきな世界をえらんでスタート！</span>
+      </p>
+
+      <!-- 3つの選べるワールド切り替えタブ -->
+      <div class="world-tab-selector">
+        <p class="world-tab-label">🌟 あそぶ世界をえらんでね</p>
+        <div class="world-tab-grid">
+          <button class="world-tab-btn active" data-world="chiikawa" id="tab-world-chiikawa">
+            <span class="w-tab-icon">🧁</span>
+            <span class="w-tab-title">ちいかわ<br><small>おやつ集め</small></span>
+          </button>
+          <button class="world-tab-btn" data-world="rpg" id="tab-world-rpg">
+            <span class="w-tab-icon">⚔️</span>
+            <span class="w-tab-title">RPG討伐<br><small>モンスターバトル</small></span>
+          </button>
+          <button class="world-tab-btn" data-world="sweets" id="tab-world-sweets">
+            <span class="w-tab-icon">🍣</span>
+            <span class="w-tab-title">スイーツ寿司打<br><small>パフェ早打ち</small></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ワールド概要カード -->
+      <div class="typing-world-card pop-card-mini" id="typing-world-desc-card">
+        <div class="typing-world-header">
+          <span class="typing-world-icon" id="typing-world-icon">🧁</span>
+          <div class="typing-world-text">
+            <h4 class="typing-world-title" id="typing-world-name">ちいかわ おやつ集め</h4>
+            <p class="typing-world-desc" id="typing-world-desc">お菓子やセリフをタイプ！おやつをあつめて「わァ…！」と喜ばせよう！</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- コース・難易度選択 -->
+      <div class="mode-selector">
+        <p class="mode-label">🎯 むずかしさをえらぶ</p>
+        <div class="mode-buttons" role="group" aria-label="難易度の選択">
+          <button class="mode-btn pop-btn typing-course-btn active" data-course="easy" id="typing-course-easy">🐣 かんたん</button>
+          <button class="mode-btn pop-btn typing-course-btn" data-course="normal" id="typing-course-normal">🐥 ふつう</button>
+          <button class="mode-btn pop-btn typing-course-btn" data-course="hard" id="typing-course-hard">🦅 激ムズ</button>
+        </div>
+      </div>
+
+      <!-- 指ガイド表示トグル -->
+      <div class="typing-toggle-row">
+        <label class="typing-toggle-label" for="toggle-finger-guide">
+          <span>🖐️ 画面キーボード ＆ 指ガイドを表示する</span>
+        </label>
+        <input type="checkbox" id="toggle-finger-guide" checked class="pop-checkbox">
+      </div>
+
+      <!-- ポイント & 通帳リンクカード -->
+      <div class="start-point-box pop-card-point" id="typing-start-point-box">
+        <div class="point-box-left">
+          <span class="point-coin-icon">🪙</span>
+          <div class="point-box-text">
+            <div class="point-box-label">もっているポイント</div>
+            <div class="point-box-val"><span id="typing-start-points-display">0</span> <small>pt</small></div>
+          </div>
+        </div>
+        <button id="btn-open-wallet-typing" class="btn-wallet-open">
+          <span>💰</span> ポイント通帳 ↗
+        </button>
+      </div>
+
+      <div class="start-action-wrap">
+        <button id="btn-typing-start-run" class="btn-pop-primary btn-typing-theme">
+          <span>🚀</span> タイピングスタート！
+        </button>
+      </div>
+
+      <div class="start-features-hint">
+        <span>✨ 柔軟なローマ字入力</span>
+        <span>🖐️ ホームポジションガイド</span>
+        <span>🪙 2〜5pt獲得</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TYPING QUIZ SCREEN ========== -->
+  <div id="screen-typing-quiz" class="screen">
+    <div class="typing-quiz-container" id="typing-quiz-container">
+      <div class="quiz-top-bar">
+        <button id="btn-typing-quit" class="btn-pop-small-ghost" aria-label="やめる">✕ やめる</button>
+        <div class="quiz-q-counter">
+          <span class="q-num-current" id="typing-q-current">1</span>
+          <span class="q-num-slash">/</span>
+          <span class="q-num-total" id="typing-q-total">8</span>
+        </div>
+        <div class="quiz-top-right">
+          <span class="quiz-mode-pill typing" id="typing-quiz-world-tag">🧁 ちいかわ</span>
+          <span class="session-points-pill" id="typing-session-points-pill">🪙 +<span id="typing-session-points">0</span>pt</span>
+        </div>
+      </div>
+
+      <div class="quiz-progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+        <div class="quiz-progress-fill typing" id="typing-progress-bar"></div>
+      </div>
+
+      <!-- タイピングステージ（アニメーション・お題・ローマ字） -->
+      <div class="typing-stage-card pop-card" id="typing-stage-card">
+        <!-- キャラクター・ゲーム演出エリア -->
+        <div class="typing-visual-stage" id="typing-visual-stage">
+          <div class="typing-char-box" id="typing-char-box">
+            <span class="typing-char-emoji" id="typing-char-emoji">🧁</span>
+            <div class="typing-speech-bubble" id="typing-speech-bubble">タイピングスタート！</div>
+          </div>
+          <div class="typing-streak-counter" id="typing-streak-counter">
+            <span class="streak-num" id="typing-combo-num">0</span> COMBO!
+          </div>
+        </div>
+
+        <!-- お題の漢字・ひらがな表示 -->
+        <div class="typing-target-box">
+          <div class="typing-target-kanji serif-text" id="typing-target-kanji">ちいかわ</div>
+          <div class="typing-target-kana" id="typing-target-kana">ちいかわ</div>
+        </div>
+
+        <!-- ローマ字進行表示 -->
+        <div class="typing-romaji-box" id="typing-romaji-box">
+          <span class="romaji-typed" id="romaji-typed"></span>
+          <span class="romaji-next" id="romaji-next">c</span>
+          <span class="romaji-remain" id="romaji-remain">hiikawa</span>
+        </div>
+
+        <div class="typing-hint-text" id="typing-hint-text">💡 意味: 小さくてかわいいやつ</div>
+      </div>
+
+      <!-- 画面キーボード ＆ 指ガイド（ホームポジション） -->
+      <div class="typing-keyboard-card pop-card" id="typing-keyboard-card">
+        <div class="typing-finger-legend">
+          <span class="f-pill f-l-pinky">左小指</span>
+          <span class="f-pill f-l-ring">左薬指</span>
+          <span class="f-pill f-l-mid">左中指</span>
+          <span class="f-pill f-l-index">左人差</span>
+          <span class="f-pill f-thumb">親指</span>
+          <span class="f-pill f-r-index">右人差</span>
+          <span class="f-pill f-r-mid">右中指</span>
+          <span class="f-pill f-r-ring">右薬指</span>
+          <span class="f-pill f-r-pinky">右小指</span>
+        </div>
+
+        <div class="keyboard-grid" id="keyboard-grid">
+          <!-- 1段目: 数字 -->
+          <div class="kb-row">
+            <button class="kb-key f-l-pinky" data-char="1">1</button>
+            <button class="kb-key f-l-ring" data-char="2">2</button>
+            <button class="kb-key f-l-mid" data-char="3">3</button>
+            <button class="kb-key f-l-index" data-char="4">4</button>
+            <button class="kb-key f-l-index" data-char="5">5</button>
+            <button class="kb-key f-r-index" data-char="6">6</button>
+            <button class="kb-key f-r-index" data-char="7">7</button>
+            <button class="kb-key f-r-mid" data-char="8">8</button>
+            <button class="kb-key f-r-ring" data-char="9">9</button>
+            <button class="kb-key f-r-pinky" data-char="0">0</button>
+            <button class="kb-key f-r-pinky" data-char="-">-</button>
+          </div>
+          <!-- 2段目: QWERTYUIOP -->
+          <div class="kb-row">
+            <button class="kb-key f-l-pinky" data-char="Q">Q</button>
+            <button class="kb-key f-l-ring" data-char="W">W</button>
+            <button class="kb-key f-l-mid" data-char="E">E</button>
+            <button class="kb-key f-l-index" data-char="R">R</button>
+            <button class="kb-key f-l-index" data-char="T">T</button>
+            <button class="kb-key f-r-index" data-char="Y">Y</button>
+            <button class="kb-key f-r-index" data-char="U">U</button>
+            <button class="kb-key f-r-mid" data-char="I">I</button>
+            <button class="kb-key f-r-ring" data-char="O">O</button>
+            <button class="kb-key f-r-pinky" data-char="P">P</button>
+          </div>
+          <!-- 3段目: ASDFGHJKL -->
+          <div class="kb-row">
+            <button class="kb-key f-l-pinky" data-char="A">A</button>
+            <button class="kb-key f-l-ring" data-char="S">S</button>
+            <button class="kb-key f-l-mid" data-char="D">D</button>
+            <button class="kb-key f-l-index home-key" data-char="F">F<span class="home-dot">_</span></button>
+            <button class="kb-key f-l-index" data-char="G">G</button>
+            <button class="kb-key f-r-index" data-char="H">H</button>
+            <button class="kb-key f-r-index home-key" data-char="J">J<span class="home-dot">_</span></button>
+            <button class="kb-key f-r-mid" data-char="K">K</button>
+            <button class="kb-key f-r-ring" data-char="L">L</button>
+          </div>
+          <!-- 4段目: ZXCVBNM -->
+          <div class="kb-row">
+            <button class="kb-key f-l-pinky" data-char="Z">Z</button>
+            <button class="kb-key f-l-ring" data-char="X">X</button>
+            <button class="kb-key f-l-mid" data-char="C">C</button>
+            <button class="kb-key f-l-index" data-char="V">V</button>
+            <button class="kb-key f-r-index" data-char="B">B</button>
+            <button class="kb-key f-r-index" data-char="N">N</button>
+            <button class="kb-key f-r-mid" data-char="M">M</button>
+            <button class="kb-key f-r-pinky" data-char="!">!</button>
+            <button class="kb-key f-r-pinky" data-char="?">?</button>
+          </div>
+          <!-- 5段目: スペース -->
+          <div class="kb-row">
+            <button class="kb-key kb-space f-thumb" data-char=" ">SPACE</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- タイピングフィードバックオーバーレイ -->
+      <div id="typing-feedback-overlay" class="feedback-overlay" aria-live="assertive"></div>
+    </div>
+  </div>
+
+  <!-- ========== TYPING RESULT SCREEN ========== -->
+  <div id="screen-typing-result" class="screen">
+    <div class="result-card pop-card typing-theme" id="typing-result-card">
+      <div id="typing-result-emoji" class="result-emoji pop-bounce">🏆</div>
+      <h2 id="typing-result-title" class="result-title">すごい！クリア！</h2>
+      <p class="typing-result-subtitle" id="typing-result-subtitle">むちゃうまタイピングマスター！</p>
+
+      <!-- ランク ＆ 速度統計ブロック -->
+      <div class="typing-stats-grid">
+        <div class="typing-stat-box rank-box">
+          <div class="t-stat-label">総合ランク</div>
+          <div class="t-stat-val rank-val" id="typing-result-rank">S</div>
+        </div>
+        <div class="typing-stat-box">
+          <div class="t-stat-label">入力速度</div>
+          <div class="t-stat-val"><span id="typing-result-wpm">180</span> <small>打/分</small></div>
+        </div>
+        <div class="typing-stat-box">
+          <div class="t-stat-label">せいかくりつ</div>
+          <div class="t-stat-val"><span id="typing-result-acc">98</span> <small>%</small></div>
+        </div>
+        <div class="typing-stat-box">
+          <div class="t-stat-label">最大コンボ</div>
+          <div class="t-stat-val"><span id="typing-result-maxcombo">45</span> <small>回</small></div>
+        </div>
+      </div>
+
+      <!-- ポイント獲得リザルトカード -->
+      <div class="result-point-banner pop-card-point">
+        <div class="result-point-header">
+          <span class="point-star-icon">🪙</span>
+          <span class="result-point-title">タイピングでゲットしたポイント</span>
+        </div>
+        <div class="result-point-val">+<span id="typing-result-earned-points">0</span> <small>pt 獲得！</small></div>
+        <div id="typing-result-limit-notice" class="result-limit-notice" style="display:none;"></div>
+        <div class="result-point-total-note">
+          合計: <strong id="typing-result-total-points">0</strong> pt（お小遣い <span id="typing-result-cash-equiv">0</span>円 / 本ポイントなら <span id="typing-result-book-equiv">0</span>円分）
+        </div>
+        <button id="btn-open-wallet-typing-result" class="btn-wallet-open full-width">
+          <span>💰</span> ポイント通帳で交換・確認する ↗
+        </button>
+      </div>
+
+      <div class="result-actions">
+        <button id="btn-typing-retry" class="btn-pop-primary btn-typing-theme">
+          <span>🔁</span> もう一回やる！
+        </button>
+        <button id="btn-typing-home" class="btn-pop-secondary">
+          <span>🏠</span> 科目えらびに戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== WALLET SCREEN (おこづかい・ポイント通帳) ========== -->
+  <div id="screen-wallet" class="screen">
+    <div class="wallet-wrap">
+      <button id="btn-wallet-back" class="btn-pop-back" aria-label="もどる">
+        ← もどる
+      </button>
+      
+      <div class="wallet-card pop-card">
+        <div class="wallet-header">
+          <div class="wallet-icon pop-bounce">💰</div>
+          <h2 class="wallet-title">おこづかい・ポイント通帳</h2>
+          <p class="wallet-account-label" id="wallet-account-name">たろうさんの通帳</p>
+        </div>
+
+        <!-- ポイント残高メインカード -->
+        <div class="wallet-balance-box pop-balance-card">
+          <div class="balance-sub">現在の所持ポイント</div>
+          <div class="balance-main">
+            <span class="balance-coin">🪙</span>
+            <span class="balance-num" id="wallet-points-num">0</span>
+            <span class="balance-unit">pt</span>
+          </div>
+          <div class="balance-cash-note">
+            💵 お小遣いならそのまま: <strong id="wallet-cash-equiv">0</strong> 円分（1pt = 1円）
+          </div>
+        </div>
+
+        <!-- バリューブックス為替連動交換カード -->
+        <div class="wallet-fx-card pop-card-accent">
+          <div class="fx-header">
+            <div class="fx-title-area">
+              <span class="fx-badge">📚 おすすめ！</span>
+              <h3 class="fx-heading">バリューブックス（本）に交換</h3>
+            </div>
+            <div class="fx-rate-tag" id="wallet-fx-tag">
+              📈 1ドル = <span id="wallet-fx-rate">158.50</span> 円
+            </div>
+          </div>
+          <p class="fx-desc">
+            100ptを1ドルとして日本円に換算！為替（円安）の力でお小遣いよりも<strong>おトク</strong>に本が買えるよ！
+          </p>
+
+          <div class="fx-conversion-preview">
+            <div class="fx-calc-line">
+              <span>ポイントをすべて本に交換すると:</span>
+              <strong class="fx-book-value" id="wallet-book-equiv">0 円分</strong>
+            </div>
+            <div class="fx-bonus-line" id="wallet-bonus-line">
+              ✨ お小遣いより <span id="wallet-bonus-amount">+0</span> 円もおトク！
+            </div>
+          </div>
+
+          <div class="fx-action-buttons">
+            <button id="btn-exchange-books" class="btn-pop-books">
+              <span>📚</span> 本ポイントに交換する！
+            </button>
+            <a href="https://www.valuebooks.jp/" target="_blank" rel="noopener noreferrer" class="btn-pop-link-books">
+              <span>🛒</span> バリューブックスで本をさがす ↗
+            </a>
+          </div>
+
+          <!-- 保有中の本ポイントストック -->
+          <div class="book-stock-box" id="wallet-book-stock-box">
+            <span class="book-stock-label">📖 交換済みのバリューブックスポイント：</span>
+            <strong class="book-stock-val" id="wallet-book-stock">0 円分</strong>
+          </div>
+        </div>
+
+        <!-- ほしい本メモ / ウィッシュリスト -->
+        <div class="wallet-wishlist-card pop-card" id="wallet-wishlist-section">
+          <div class="wishlist-header">
+            <div class="wishlist-title-area">
+              <span class="wishlist-badge">🎯 目標をつくろう！</span>
+              <h3 class="wishlist-heading">📖 ほしい本メモ（ウィッシュリスト）</h3>
+            </div>
+            <button id="btn-toggle-add-wishlist" class="btn-pop-small-primary">
+              ＋ ほしい本を追加
+            </button>
+          </div>
+          <p class="wishlist-desc">
+            バリューブックスで見つけた「読みたい本」をメモしよう！あと何ポイントで買えるか自動計算するよ！
+          </p>
+
+          <!-- ほしい本追加フォーム（開閉式） -->
+          <div id="wishlist-form-panel" class="wishlist-form-panel" style="display:none;">
+            <div class="form-group">
+              <label for="wishlist-input-title">本のなまえ（タイトル）<span class="req" style="color:var(--color-danger);">*</span></label>
+              <input type="text" id="wishlist-input-title" class="form-input pop-input" placeholder="例: 銭天堂、サバイバルシリーズなど">
+            </div>
+            <div class="form-group-row">
+              <div class="form-group" style="flex:1;">
+                <label for="wishlist-input-price">お値段（円）<span class="req" style="color:var(--color-danger);">*</span></label>
+                <input type="number" id="wishlist-input-price" class="form-input pop-input" placeholder="例: 480" min="50" max="10000">
+              </div>
+              <div class="form-group" style="flex:2;">
+                <label for="wishlist-input-url">バリューブックスのURL（リンク）</label>
+                <input type="url" id="wishlist-input-url" class="form-input pop-input" placeholder="https://www.valuebooks.jp/bp/...">
+              </div>
+            </div>
+            <div class="wishlist-form-actions">
+              <button id="btn-save-wishlist-item" class="btn-pop-primary">
+                <span>📌</span> リストに追加する！
+              </button>
+              <button id="btn-cancel-wishlist-item" class="btn-pop-ghost">
+                キャンセル
+              </button>
+            </div>
+          </div>
+
+          <!-- ウィッシュリスト一覧 -->
+          <div class="wishlist-items-container" id="wishlist-items-container">
+            <!-- JSで挿入 -->
+          </div>
+        </div>
+
+        <!-- お小遣い換金カード -->
+        <div class="wallet-cash-card">
+          <div class="cash-header">
+            <h3 class="cash-heading">💵 お小遣いにする（1pt = 1円）</h3>
+          </div>
+          <p class="cash-desc">現金でお小遣いをもらいたいときは、おうちの人に申請してね。</p>
+          <button id="btn-claim-cash" class="btn-pop-cash">
+            <span>💴</span> お小遣いをもらう（申請）
+          </button>
+        </div>
+
+        <!-- 履歴ログ -->
+        <div class="wallet-history-section">
+          <h4 class="history-title">📜 ポイント・交換のきろく</h4>
+          <div class="history-list" id="wallet-history-list">
+            <!-- JSで挿入 -->
+          </div>
+        </div>
+
+        <!-- 保護者用精算・設定メニュー -->
+        <div class="parent-section pop-parent-box">
+          <div class="parent-toggle-wrap">
+            <button id="btn-parent-toggle" class="btn-parent-toggle">
+              🔒 おうちの人専用メニュー（設定・精算）
+            </button>
+          </div>
+
+          <div id="parent-panel" class="parent-panel" style="display:none;">
+            <!-- 今月・今日のポイント状況 -->
+            <div class="parent-stats-box pop-card-mini">
+              <h5 class="parent-section-subtitle">📊 ポイント獲得の進捗状況</h5>
+              <div class="parent-stat-line">
+                <span>📅 今月の獲得累計:</span>
+                <strong><span id="parent-stat-monthly">0</span> / <span id="parent-stat-max-monthly">1000</span> pt</strong>
+              </div>
+              <div class="parent-stat-line">
+                <span>☀️ 本日の獲得累計:</span>
+                <strong><span id="parent-stat-daily">0</span> / <span id="parent-stat-max-daily">50</span> pt</strong>
+              </div>
+            </div>
+
+            <!-- 精算アクション -->
+            <h5 class="parent-section-subtitle">💳 お小遣い・本の精算</h5>
+            <div class="parent-actions">
+              <button id="btn-parent-settle-cash" class="btn-pop-small-admin">
+                💵 お小遣い精算（支払い完了）
+              </button>
+              <button id="btn-parent-settle-book" class="btn-pop-small-admin">
+                📚 本ポイント使用・精算
+              </button>
+              <button id="btn-parent-add-points" class="btn-pop-small-admin outline">
+                🎁 ごほうびポイント追加
+              </button>
+            </div>
+
+            <!-- 上限設定エリア（iPad上で親が可変設定） -->
+            <div class="parent-config-box">
+              <h5 class="parent-section-subtitle">⚙️ ポイント上限の設定</h5>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label for="cfg-max-monthly">1ヶ月の上限 (pt/円):</label>
+                  <input type="number" id="cfg-max-monthly" class="form-input pop-input-sm" value="1000" min="100" max="10000" step="100">
+                </div>
+                <div class="config-item">
+                  <label for="cfg-max-daily">1日の目安上限 (pt/円):</label>
+                  <input type="number" id="cfg-max-daily" class="form-input pop-input-sm" value="50" min="10" max="1000" step="10">
+                </div>
+              </div>
+              <div class="config-checkbox-wrap">
+                <label class="config-check-label">
+                  <input type="checkbox" id="cfg-carryover" checked>
+                  <span>✨ <strong>月末残枠解放モード</strong>（未消化の月間残枠がある場合、1日上限を超えて獲得可能にする）</span>
+                </label>
+              </div>
+              <button id="btn-save-point-config" class="btn-pop-primary btn-sm">
+                <span>💾</span> 上限設定を保存する
+              </button>
+            </div>
+
+            <!-- 暗証番号変更エリア -->
+            <div class="parent-pin-change-box">
+              <h5 class="parent-section-subtitle">🔑 保護者暗証番号（4桁PIN）</h5>
+              <button id="btn-change-pin" class="btn-pop-small-ghost">
+                <span>🔄</span> 暗証番号（PIN）を変更する
+              </button>
+            </div>
+
+            <!-- データバックアップ・復元エリア -->
+            <div class="parent-backup-box">
+              <h5 class="parent-section-subtitle">💾 データのバックアップ・復元</h5>
+              <div class="backup-actions-grid">
+                <button id="btn-export-backup" class="btn-pop-small-admin outline">
+                  <span>📥</span> バックアップ保存 (JSON)
+                </button>
+                <label class="btn-pop-small-admin outline btn-import-label" for="input-import-backup">
+                  <span>📤</span> データ復元 (インポート)
+                  <input type="file" id="input-import-backup" accept=".json" style="display:none;">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PARENT PIN MODAL (4桁暗証番号入力) ========== -->
+  <div id="modal-parent-pin" class="pin-modal-overlay" style="display:none;">
+    <div class="pin-modal-card pop-card">
+      <div class="pin-modal-header">
+        <div class="pin-lock-icon">🔒</div>
+        <h3 class="pin-modal-title">保護者暗証番号</h3>
+        <p class="pin-modal-desc">4桁の番号を入力してください（初期値: 0000）</p>
+      </div>
+
+      <div class="pin-dots-display" id="pin-dots-display">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+      <div id="pin-error-msg" class="pin-error-msg" style="display:none;">暗証番号が正しくありません</div>
+
+      <!-- テンキーパッド -->
+      <div class="pin-keypad">
+        <button class="pin-key-btn" data-key="1">1</button>
+        <button class="pin-key-btn" data-key="2">2</button>
+        <button class="pin-key-btn" data-key="3">3</button>
+        <button class="pin-key-btn" data-key="4">4</button>
+        <button class="pin-key-btn" data-key="5">5</button>
+        <button class="pin-key-btn" data-key="6">6</button>
+        <button class="pin-key-btn" data-key="7">7</button>
+        <button class="pin-key-btn" data-key="8">8</button>
+        <button class="pin-key-btn" data-key="9">9</button>
+        <button class="pin-key-btn pin-key-cancel" id="btn-pin-cancel">✕</button>
+        <button class="pin-key-btn" data-key="0">0</button>
+        <button class="pin-key-btn pin-key-back" id="btn-pin-back">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CONFIRM DELETE ACCOUNT MODAL ========== -->
+  <div id="modal-confirm-delete" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title">
+    <div class="modal-confirm-card pop-card">
+      <div class="modal-confirm-icon">🗑️</div>
+      <h3 class="modal-confirm-title" id="confirm-delete-title">アカウントをけす？</h3>
+      <p class="modal-confirm-message">
+        <strong id="confirm-delete-name"></strong> のデータ（ポイント・通帳・にがて記録など）が<br>
+        <span class="danger-text">すべて消えてもどりません。</span><br>
+        本当に消しますか？
+      </p>
+      <div class="modal-confirm-actions">
+        <button id="btn-confirm-delete-yes" class="btn-pop-danger btn-confirm-yes">
+          <span>🗑</span> はい、けす
+        </button>
+        <button id="btn-confirm-delete-no" class="btn-pop-outline btn-confirm-no">
+          <span>↩</span> やめる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="quiz_data.js?v=20260825_v2"></script>
+
+  <script src="math_data.js?v=20260825_v2"></script>
+  <script src="typing_data.js?v=20260825_v2"></script>
+  <script src="app.js?v=20260825_v2"></script>
+</body>
+</html>
