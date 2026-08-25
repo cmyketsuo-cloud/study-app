@@ -3171,10 +3171,10 @@ function generateWritingQuestions(grade, count) {
   const curPool = (typeof WRITING_DATA !== 'undefined' && WRITING_DATA[curGrade]) ? WRITING_DATA[curGrade] : [];
   const prevPool = (typeof WRITING_DATA !== 'undefined' && WRITING_DATA[prevGrade]) ? WRITING_DATA[prevGrade] : [];
 
-  const curSelected = shuffleArray([...curPool]).slice(0, curCount).map(item => ({ ...item, grade: curGrade }));
-  const prevSelected = shuffleArray([...prevPool]).slice(0, prevCount).map(item => ({ ...item, grade: prevGrade }));
+  const curSelected = shuffle([...curPool]).slice(0, curCount).map(item => ({ ...item, grade: curGrade }));
+  const prevSelected = shuffle([...prevPool]).slice(0, prevCount).map(item => ({ ...item, grade: prevGrade }));
 
-  return shuffleArray([...curSelected, ...prevSelected]);
+  return shuffle([...curSelected, ...prevSelected]);
 }
 
 function openWritingStart() {
