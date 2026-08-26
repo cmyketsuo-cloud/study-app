@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん25 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん26 🌸</span>
       </div>
     </div>
   </div>
@@ -209,12 +209,19 @@
         </button>
         <div class="portal-account-badge">
           <span class="portal-avatar-letter" id="portal-avatar-letter">た</span>
-          <span class="portal-account-name" id="portal-account-name">たろう</span>
+          <div class="portal-name-wrap">
+            <span class="portal-account-name" id="portal-account-name">たろう</span>
+            <span class="portal-equipped-title" id="portal-equipped-title" style="display:none;">🌟 はじめの一歩</span>
+          </div>
           <span class="portal-grade-pill" id="portal-grade-pill">5年生</span>
         </div>
         <!-- 📖 全問ふりがな（ルビ）トグルボタン -->
         <button id="btn-toggle-furigana" class="btn-toggle-furigana" title="すべての漢字にふりがな（ルビ）をつける">
           <span>📖</span> <span id="furigana-toggle-text">ふりがな: ON</span>
+        </button>
+        <!-- 🏆 バッジコレクションボタン -->
+        <button id="btn-portal-badges" class="btn-portal-badges" title="称号・バッジコレクションを見る">
+          <span>🏆</span> バッジ <strong id="portal-badge-count">0/18</strong>
         </button>
         <!-- 🔥 連続ログイン（ストリーク）バッジ -->
         <button id="portal-streak-badge" class="portal-streak-badge" title="がんばりカレンダーを見る">
@@ -362,7 +369,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん25 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん26 🌸</span>
       </div>
     </div>
   </div>
@@ -1748,10 +1755,63 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260826_v25"></script>
-  <script src="writing_data.js?v=20260826_v25"></script>
-  <script src="math_data.js?v=20260826_v25"></script>
-  <script src="typing_data.js?v=20260826_v25"></script>
-  <script src="app.js?v=20260826_v25"></script>
+  <!-- ========== BADGE UNLOCKED MODAL ========== -->
+  <div id="modal-badge-unlocked" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal-badge-unlocked-card pop-card pop-bounce">
+      <div class="badge-ribbon">🏆 実績解除！</div>
+      <div class="unlocked-badge-icon" id="unlocked-badge-icon">🌟</div>
+      <h3 class="unlocked-badge-title" id="unlocked-badge-title">はじめの一歩</h3>
+      <p class="unlocked-badge-desc" id="unlocked-badge-desc">はじめて問題をクリアした！</p>
+      
+      <div class="badge-bonus-pill">
+        <span>🪙 解放ボーナス +<strong>2.0</strong> pt 獲得！</span>
+      </div>
+
+      <div class="unlocked-badge-actions">
+        <button id="btn-badge-equip-now" class="btn-pop-primary">
+          <span>✨</span> この称号を装備する！
+        </button>
+        <button id="btn-badge-close" class="btn-pop-secondary">
+          とじる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== BADGE COLLECTION MODAL ========== -->
+  <div id="modal-badge-collection" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+    <div class="badge-collection-card pop-card">
+      <div class="badge-collection-header">
+        <div class="badge-header-title-wrap">
+          <span class="badge-modal-icon">🏆</span>
+          <div>
+            <h3 class="badge-collection-title">称号・バッジ コレクション</h3>
+            <p class="badge-collection-sub" id="badge-account-name">たろうさんの実績帳</p>
+          </div>
+        </div>
+        <button id="btn-badges-close" class="guide-close-btn" aria-label="閉じる">✕</button>
+      </div>
+
+      <!-- 獲得状況サマリー -->
+      <div class="badge-progress-box">
+        <div class="badge-progress-label">
+          <span>集めたバッジ</span>
+          <strong id="badge-collection-progress-text">0 / 18 個</strong>
+        </div>
+        <div class="badge-progress-bar-bg">
+          <div id="badge-collection-progress-bar" class="badge-progress-bar-fill" style="width:0%;"></div>
+        </div>
+      </div>
+
+      <!-- バッジ一覧グリッド -->
+      <div class="badge-grid" id="badge-collection-grid"></div>
+    </div>
+  </div>
+
+  <script src="quiz_data.js?v=20260826_v26"></script>
+  <script src="writing_data.js?v=20260826_v26"></script>
+  <script src="math_data.js?v=20260826_v26"></script>
+  <script src="typing_data.js?v=20260826_v26"></script>
+  <script src="app.js?v=20260826_v26"></script>
 </body>
 </html>

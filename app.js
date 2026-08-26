@@ -4,6 +4,43 @@
  */
 
 // =============================================
+//  🏆 ACHIEVEMENTS & BADGE DEFINITIONS (v26)
+// =============================================
+const ACHIEVEMENTS = [
+  // 学習・ストリーク系
+  { id: 'first_step', title: 'はじめの一歩', icon: '🌟', desc: 'はじめて問題をクリアした！', points: 2.0 },
+  { id: 'streak_3', title: '三日坊主卒業', icon: '🔥', desc: '3日連続でログインした！', points: 2.0 },
+  { id: 'streak_7', title: '習慣化マスター', icon: '⚡', desc: '7日連続でログインした！', points: 3.0 },
+  { id: 'study_50', title: 'がんばり屋', icon: '📚', desc: '合計50問クリアした！', points: 2.0 },
+  { id: 'study_100', title: '勉強の達人', icon: '🎓', desc: '合計100問クリアした！', points: 3.0 },
+  { id: 'study_300', title: '学習キング', icon: '👑', desc: '合計300問クリアした！', points: 5.0 },
+
+  // 漢字・書き取り系
+  { id: 'kanji_10', title: '漢字の芽', icon: '💮', desc: '漢字ドリルで10問正解した！', points: 2.0 },
+  { id: 'kanji_perfect', title: '漢字満点賞', icon: '💯', desc: '漢字ドリルで満点を達成した！', points: 2.0 },
+  { id: 'writing_first', title: '美文字デビュー', icon: '✍️', desc: '漢字書き取りを初クリアした！', points: 2.0 },
+  { id: 'writing_50', title: '書道の達人', icon: '📜', desc: '漢字書き取りで累計50問正解した！', points: 3.0 },
+  { id: 'weak_buster', title: 'にがてバスター', icon: '🥊', desc: '苦手問題を克服した！', points: 3.0 },
+
+  // 算数系
+  { id: 'math_first', title: '計算チャレンジャー', icon: '➕', desc: '算数クエストを初クリアした！', points: 2.0 },
+  { id: 'math_perfect', title: '計算マスター', icon: '🏆', desc: '算数クエストで満点を達成した！', points: 2.0 },
+  { id: 'math_50', title: '暗算の魔術師', icon: '🧙‍♂️', desc: '算数で累計50問正解した！', points: 3.0 },
+
+  // タイピング系
+  { id: 'typing_first', title: 'キーボードデビュー', icon: '⌨️', desc: 'タイピング特訓を初クリアした！', points: 2.0 },
+  { id: 'typing_s_rank', title: '寿司職人', icon: '🍣', desc: 'タイピングでSランクを獲得した！', points: 3.0 },
+  { id: 'typing_speedster', title: '神速タイパー', icon: '⚡', desc: 'タイピング激ムズ以上をノーミスクリア！', points: 5.0 },
+
+  // ポイント・目標系
+  { id: 'point_50', title: 'ちょきん上手', icon: '🪙', desc: '累計50ptを獲得した！', points: 2.0 },
+  { id: 'point_100', title: '貯金王', icon: '💰', desc: '累計100ptを獲得した！', points: 3.0 },
+  { id: 'wishlist_set', title: 'ゆめ見る人', icon: '🎯', desc: 'ほしい本を目標に登録した！', points: 2.0 }
+];
+
+let currentScreen = 'screen-account';
+
+// =============================================
 //  POINT FORMATTING UTILITY (小数点対応)
 // =============================================
 function formatPoints(pts) {
@@ -638,6 +675,7 @@ function applyGradeTheme(grade) {
 }
 
 function showScreen(id) {
+  currentScreen = id;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const target = document.getElementById(id);
   if (target) {
@@ -1043,6 +1081,33 @@ function renderPortalScreen() {
     streakCountEl.textContent = (acc.streak && acc.streak.currentStreak) || 1;
   }
 
+  // 🏆 装着中称号の表示
+  const equippedTitleEl = document.getElementById('portal-equipped-title');
+  if (equippedTitleEl) {
+    if (acc.equippedTitle) {
+      const b = ACHIEVEMENTS.find(item => item.id === acc.equippedTitle);
+      if (b) {
+        equippedTitleEl.textContent = `${b.icon} ${b.title}`;
+        equippedTitleEl.style.display = 'inline-block';
+      } else {
+        equippedTitleEl.style.display = 'none';
+      }
+    } else {
+      equippedTitleEl.style.display = 'none';
+    }
+  }
+
+  // 🏆 バッジ獲得数の更新
+  const unlockedCount = Object.keys(acc.achievements || {}).length;
+  const badgeCountEl = document.getElementById('portal-badge-count');
+  if (badgeCountEl) {
+    badgeCountEl.textContent = `${unlockedCount}/${ACHIEVEMENTS.length}`;
+  }
+
+  // 実績判定実行 & ポップアップ
+  checkAndUnlockAchievements(acc);
+  setTimeout(() => showPendingBadgePopups(), 600);
+
   // 科目カードのポイントヒント動的表示
   const ptsKanji = getPointPerQuestion(acc, 'kanji');
   const ptsWriting = getPointPerQuestion(acc, 'writing');
@@ -1151,9 +1216,6 @@ function updateStartScreenMasteryBanner() {
   const barWeak = document.getElementById('m-bar-weak');
 
   if (barMaster) barMaster.style.width = ((mStats.master / total) * 100) + '%';
-  if (barLearning) barLearning.style.width = ((mStats.learning / total) * 100) + '%';
-  if (barWeak) barWeak.style.width = ((mStats.weak / total) * 100) + '%';
-
   const cntMaster = document.getElementById('m-count-master');
   const cntLearning = document.getElementById('m-count-learning');
   const cntWeak = document.getElementById('m-count-weak');
@@ -1163,6 +1225,205 @@ function updateStartScreenMasteryBanner() {
   if (cntLearning) cntLearning.textContent = mStats.learning;
   if (cntWeak) cntWeak.textContent = mStats.weak;
   if (cntUnseen) cntUnseen.textContent = mStats.unseen;
+}
+
+// =============================================
+//  🏆 ACHIEVEMENTS & BADGE FUNCTIONS (v26)
+// =============================================
+function checkAndUnlockAchievements(acc, eventContext = {}) {
+  if (!acc) return;
+  if (!acc.achievements) acc.achievements = {};
+
+  // 累計問数・正解数の集計
+  let totalQuestionsAnswered = 0;
+  let totalKanjiCorrect = 0;
+  let totalWritingCorrect = 0;
+  let totalMathCorrect = 0;
+  let totalTypingCount = 0;
+
+  if (acc.studyLog) {
+    Object.values(acc.studyLog).forEach(day => {
+      if (day.items) {
+        day.items.forEach(item => {
+          totalQuestionsAnswered += (item.count || 0);
+          if (item.subject.includes('漢字ドリル')) totalKanjiCorrect += (item.count || 0);
+          if (item.subject.includes('書き取り')) totalWritingCorrect += (item.count || 0);
+          if (item.subject.includes('算数')) totalMathCorrect += (item.count || 0);
+          if (item.subject.includes('タイピング')) totalTypingCount += (item.count || 0);
+        });
+      }
+    });
+  }
+
+  const streak = (acc.streak && acc.streak.maxStreak) || 1;
+  const totalEarned = (acc.monthlyLimits && acc.monthlyLimits.monthlyEarned) || (acc.points || 0);
+
+  // 条件判定
+  if (totalQuestionsAnswered >= 1) unlockBadge(acc, 'first_step');
+  if (streak >= 3) unlockBadge(acc, 'streak_3');
+  if (streak >= 7) unlockBadge(acc, 'streak_7');
+  if (totalQuestionsAnswered >= 50) unlockBadge(acc, 'study_50');
+  if (totalQuestionsAnswered >= 100) unlockBadge(acc, 'study_100');
+  if (totalQuestionsAnswered >= 300) unlockBadge(acc, 'study_300');
+
+  if (totalKanjiCorrect >= 10) unlockBadge(acc, 'kanji_10');
+  if (eventContext.kanjiPerfect) unlockBadge(acc, 'kanji_perfect');
+  if (totalWritingCorrect >= 1) unlockBadge(acc, 'writing_first');
+  if (totalWritingCorrect >= 50) unlockBadge(acc, 'writing_50');
+  if (eventContext.weakConquered) unlockBadge(acc, 'weak_buster');
+
+  if (totalMathCorrect >= 1) unlockBadge(acc, 'math_first');
+  if (eventContext.mathPerfect) unlockBadge(acc, 'math_perfect');
+  if (totalMathCorrect >= 50) unlockBadge(acc, 'math_50');
+
+  if (totalTypingCount >= 1) unlockBadge(acc, 'typing_first');
+  if (eventContext.typingRank === 'S' || eventContext.typingRank === 'SS') unlockBadge(acc, 'typing_s_rank');
+  if (eventContext.typingSpeedster) unlockBadge(acc, 'typing_speedster');
+
+  if (totalEarned >= 50 || (acc.points || 0) >= 50) unlockBadge(acc, 'point_50');
+  if (totalEarned >= 100 || (acc.points || 0) >= 100) unlockBadge(acc, 'point_100');
+  if (acc.wishlist && acc.wishlist.length > 0) unlockBadge(acc, 'wishlist_set');
+}
+
+function unlockBadge(acc, badgeId) {
+  if (!acc.achievements) acc.achievements = {};
+  if (acc.achievements[badgeId]) return;
+
+  const badge = ACHIEVEMENTS.find(b => b.id === badgeId);
+  if (!badge) return;
+
+  acc.achievements[badgeId] = { unlockedAt: Date.now() };
+
+  // 解放ボーナスポイント
+  if (badge.points > 0) {
+    acc.points = Math.round(((acc.points || 0) + badge.points) * 100) / 100;
+    if (!acc.pointHistory) acc.pointHistory = [];
+    acc.pointHistory.push({
+      type: 'earn',
+      title: `🏆 実績解除: ${badge.title}`,
+      amount: badge.points,
+      date: Date.now()
+    });
+  }
+
+  // デフォルトで未装備なら自動装着
+  if (!acc.equippedTitle) {
+    acc.equippedTitle = badge.id;
+  }
+
+  saveAccounts();
+
+  // ポップアップキューに追加
+  if (!acc.pendingBadgePopups) acc.pendingBadgePopups = [];
+  acc.pendingBadgePopups.push(badge);
+}
+
+function showPendingBadgePopups() {
+  const acc = accounts[currentAccountId];
+  if (!acc || !acc.pendingBadgePopups || acc.pendingBadgePopups.length === 0) return;
+
+  const badge = acc.pendingBadgePopups.shift();
+  saveAccounts();
+
+  const modal = document.getElementById('modal-badge-unlocked');
+  if (!modal) return;
+
+  document.getElementById('unlocked-badge-icon').textContent = badge.icon;
+  document.getElementById('unlocked-badge-title').textContent = badge.title;
+  document.getElementById('unlocked-badge-desc').textContent = badge.desc;
+
+  const btnEquip = document.getElementById('btn-badge-equip-now');
+  if (btnEquip) {
+    btnEquip.onclick = () => {
+      equipTitle(badge.id);
+      modal.style.display = 'none';
+      showPendingBadgePopups();
+    };
+  }
+
+  const btnClose = document.getElementById('btn-badge-close');
+  if (btnClose) {
+    btnClose.onclick = () => {
+      modal.style.display = 'none';
+      showPendingBadgePopups();
+    };
+  }
+
+  modal.style.display = 'flex';
+  SoundFx.playFanfare();
+  ConfettiFx.launch(70);
+}
+
+function equipTitle(badgeId) {
+  const acc = accounts[currentAccountId];
+  if (!acc) return;
+
+  if (acc.equippedTitle === badgeId) {
+    acc.equippedTitle = null; // 解除
+  } else {
+    acc.equippedTitle = badgeId;
+  }
+
+  saveAccounts();
+  renderPortalScreen();
+  SoundFx.playTap();
+}
+
+function openBadgeCollectionModal(accountId) {
+  SoundFx.playTap();
+  const acc = accounts[accountId];
+  if (!acc) return;
+
+  document.getElementById('badge-account-name').textContent = `${acc.name}さんの実績帳`;
+  renderBadgeCollection();
+  document.getElementById('modal-badge-collection').style.display = 'flex';
+}
+
+function renderBadgeCollection() {
+  const acc = accounts[currentAccountId];
+  if (!acc) return;
+
+  const unlockedMap = acc.achievements || {};
+  const unlockedCount = Object.keys(unlockedMap).length;
+  const totalCount = ACHIEVEMENTS.length;
+  const pct = Math.round((unlockedCount / totalCount) * 100);
+
+  document.getElementById('badge-collection-progress-text').textContent = `${unlockedCount} / ${totalCount} 個 (${pct}%)`;
+  document.getElementById('badge-collection-progress-bar').style.width = `${pct}%`;
+
+  const grid = document.getElementById('badge-collection-grid');
+  grid.innerHTML = '';
+
+  ACHIEVEMENTS.forEach(badge => {
+    const isUnlocked = !!unlockedMap[badge.id];
+    const isEquipped = acc.equippedTitle === badge.id;
+
+    const card = document.createElement('div');
+    card.className = `badge-item-card ${isUnlocked ? 'unlocked' : 'locked'} ${isEquipped ? 'equipped' : ''}`;
+
+    card.innerHTML = `
+      <div class="badge-item-icon">${isUnlocked ? badge.icon : '🔒'}</div>
+      <div class="badge-item-name">${isUnlocked ? badge.title : '？？？？'}</div>
+      <div class="badge-item-desc">${isUnlocked ? badge.desc : '条件を達成して解放しよう！'}</div>
+      ${isUnlocked ? `
+        <button class="btn-equip-title ${isEquipped ? 'equipped' : ''}">
+          ${isEquipped ? '✓ 装備中' : '称号にする'}
+        </button>
+      ` : ''}
+    `;
+
+    if (isUnlocked) {
+      const btnEquip = card.querySelector('.btn-equip-title');
+      if (btnEquip) {
+        btnEquip.addEventListener('click', () => {
+          equipTitle(badge.id);
+          renderBadgeCollection();
+        });
+      }
+    }
+
+    grid.appendChild(card);
+  });
 }
 
 function openKanjiDrill() {
@@ -2666,7 +2927,14 @@ function showResult() {
 
   showScreen('screen-result');
   SoundFx.playFanfare();
-  ConfettiFx.launch(score >= currentQuizList.length ? 80 : 50);
+  ConfettiFx.launch(score >= quizQuestions.length ? 80 : 50);
+
+  // 🏆 実績判定 & ポップアップ
+  checkAndUnlockAchievements(acc, {
+    kanjiPerfect: score === total && total >= 5,
+    weakConquered: conqueredThisSession.length > 0
+  });
+  setTimeout(() => showPendingBadgePopups(), 600);
 }
 
 // =============================================
@@ -2992,6 +3260,12 @@ function showMathResult() {
   showScreen('screen-math-result');
   SoundFx.playFanfare();
   ConfettiFx.launch(mathScore >= mathQuestions.length ? 80 : 50);
+
+  // 🏆 実績判定 & ポップアップ
+  checkAndUnlockAchievements(acc, {
+    mathPerfect: mathScore === total && total >= 5
+  });
+  setTimeout(() => showPendingBadgePopups(), 600);
 }
 
 // =============================================
@@ -3706,6 +3980,13 @@ function finishTypingQuiz() {
   if (rank === 'S' || rank === 'A') {
     ConfettiFx.launch(70);
   }
+
+  // 🏆 実績判定 & ポップアップ
+  checkAndUnlockAchievements(acc, {
+    typingRank: rank,
+    typingSpeedster: (typingSelectedCourse === 'hard' || typingSelectedCourse === 'insane') && typingMissCount === 0
+  });
+  setTimeout(() => showPendingBadgePopups(), 600);
 }
 
 // データバックアップ（JSONエクスポート）
@@ -4352,6 +4633,14 @@ function showWritingResult() {
   }
 
   showScreen('screen-writing-result');
+  SoundFx.playFanfare();
+  ConfettiFx.launch(writingCorrectCount >= writingQuestions.length ? 80 : 50);
+
+  // 🏆 実績判定 & ポップアップ
+  checkAndUnlockAchievements(acc, {
+    writingPerfect: writingCorrectCount === total && total >= 5
+  });
+  setTimeout(() => showPendingBadgePopups(), 600);
 }
 
 // =============================================
@@ -5026,6 +5315,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnClaimBonus = document.getElementById('btn-login-bonus-claim');
   if (btnClaimBonus) {
     btnClaimBonus.addEventListener('click', claimLoginBonus);
+  }
+
+  // 🏆 称号・バッジコレクションモーダルイベント
+  const btnPortalBadges = document.getElementById('btn-portal-badges');
+  if (btnPortalBadges) {
+    btnPortalBadges.addEventListener('click', () => openBadgeCollectionModal(currentAccountId));
+  }
+  const btnBadgesClose = document.getElementById('btn-badges-close');
+  if (btnBadgesClose) {
+    btnBadgesClose.addEventListener('click', () => {
+      document.getElementById('modal-badge-collection').style.display = 'none';
+    });
   }
 
   document.getElementById('btn-change-account').addEventListener('click', () => {
