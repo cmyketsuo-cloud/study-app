@@ -1043,6 +1043,21 @@ function renderPortalScreen() {
     streakCountEl.textContent = (acc.streak && acc.streak.currentStreak) || 1;
   }
 
+  // 科目カードのポイントヒント動的表示
+  const ptsKanji = getPointPerQuestion(acc, 'kanji');
+  const ptsWriting = getPointPerQuestion(acc, 'writing');
+  const ptsMath = getPointPerQuestion(acc, 'math');
+  const ptsTyping = getPointPerQuestion(acc, 'typing');
+
+  const kanjiHintEl = document.getElementById('portal-kanji-pts-hint');
+  if (kanjiHintEl) kanjiHintEl.textContent = `🪙 ${formatPoints(ptsKanji)}pt/問`;
+  const writingHintEl = document.getElementById('portal-writing-pts-hint');
+  if (writingHintEl) writingHintEl.textContent = `🪙 ${formatPoints(ptsWriting)}pt/問`;
+  const mathHintEl = document.getElementById('portal-math-pts-hint');
+  if (mathHintEl) mathHintEl.textContent = `🪙 ${formatPoints(ptsMath)}pt/問`;
+  const typingHintEl = document.getElementById('portal-typing-pts-hint');
+  if (typingHintEl) typingHintEl.textContent = `🪙 0.1〜${formatPoints(ptsTyping)}pt`;
+
   // 漢字カード情報
   const mStats = getMasteryStats(currentAccountId, effectiveGrade);
   document.getElementById('portal-kanji-count').textContent = `📚 ${mStats.total}問収録`;
@@ -1760,6 +1775,59 @@ function renderParentPanel() {
   document.getElementById('cfg-max-monthly').value = limits.maxMonthly || 1000;
   document.getElementById('cfg-max-daily').value = limits.maxDaily || 50;
   document.getElementById('cfg-carryover').checked = limits.carryOverUnlocked !== false;
+
+  // 1問あたりのポイント設定フォームへの初期値反映
+  const weights = (acc && acc.customPointWeights) || {};
+  const defKanji = getPointPerQuestion(acc, 'kanji');
+  const defWriting = getPointPerQuestion(acc, 'writing');
+  const defMath = getPointPerQuestion(acc, 'math');
+  const defTyping = getPointPerQuestion(acc, 'typing');
+
+  const elKanji = document.getElementById('cfg-weight-kanji');
+  if (elKanji) elKanji.value = weights.kanji !== undefined ? weights.kanji : defKanji;
+  const elWriting = document.getElementById('cfg-weight-writing');
+  if (elWriting) elWriting.value = weights.writing !== undefined ? weights.writing : defWriting;
+  const elMath = document.getElementById('cfg-weight-math');
+  if (elMath) elMath.value = weights.math !== undefined ? weights.math : defMath;
+  const elTyping = document.getElementById('cfg-weight-typing');
+  if (elTyping) elTyping.value = weights.typing !== undefined ? weights.typing : defTyping;
+}
+
+function savePointWeights() {
+  const acc = accounts[currentAccountId];
+  if (!acc) return;
+
+  const wKanji = parseFloat(document.getElementById('cfg-weight-kanji').value);
+  const wWriting = parseFloat(document.getElementById('cfg-weight-writing').value);
+  const wMath = parseFloat(document.getElementById('cfg-weight-math').value);
+  const wTyping = parseFloat(document.getElementById('cfg-weight-typing').value);
+
+  if (isNaN(wKanji) || wKanji <= 0 || isNaN(wWriting) || wWriting <= 0 || isNaN(wMath) || wMath <= 0 || isNaN(wTyping) || wTyping <= 0) {
+    alert('正しいポイント数（0.1以上）を入力してください。');
+    return;
+  }
+
+  acc.customPointWeights = {
+    kanji: Math.round(wKanji * 10) / 10,
+    writing: Math.round(wWriting * 10) / 10,
+    math: Math.round(wMath * 10) / 10,
+    typing: Math.round(wTyping * 10) / 10
+  };
+
+  saveAccounts();
+  alert('🪙 1問あたりのポイント設定を保存しました！');
+  renderPortalScreen();
+}
+
+function resetPointWeights() {
+  const acc = accounts[currentAccountId];
+  if (!acc) return;
+
+  delete acc.customPointWeights;
+  saveAccounts();
+  renderParentPanel();
+  alert('🔄 学年のおすすめ設定にリセットしました！');
+  renderPortalScreen();
 }
 
 function savePointConfig() {
@@ -2087,10 +2155,112 @@ function buildQuiz(count, isWeakOnly = false) {
 }
 
 // =============================================
-//  DIFFICULTY & POINT CALCULATION (漢字読みクイズ: 基本0.2pt)
+//  📖 FURIGANA (RUBY) SYSTEM (v25)
+// =============================================
+let isFuriganaEnabled = true;
+
+// 小学生向け常用語彙・問題文漢字の読み辞書
+const FURIGANA_DICT = {
+  // 問題文・操作説明
+  '当てはまる': 'あてはまる', '当てはまり': 'あてはまり', '当てはまるもの': 'あてはまるもの',
+  '次の': 'つぎの', '次': 'つぎ', '問題': 'もんだい', '選ぼう': 'えらぼう', '選ぶ': 'えらぶ',
+  '選びなさい': 'えらびなさい', '答え': 'こたえ', '正しい': 'ただしい', '意味': 'いみ',
+  '読み方': 'よみかた', '読み': 'よみ', '書き順': 'かきじゅん', '画数': 'かくすう',
+  '反対': 'はんたい', '同じ': 'おなじ', '言葉': 'ことば', '文章': 'ぶんしょう',
+  '計算': 'けいさん', '数字': 'すうじ', '数式': 'すうしき', '順番': 'じゅんばん',
+  '入力': 'にゅうりょく', '書く': 'かく', '見本': 'みほん', 'お手本': 'おてほん',
+  'ヒント': 'ヒント', '合計': 'ごうけい', '正解': 'せいかい', '不正解': 'ふせいかい',
+  // 日常名詞・動詞・形容詞
+  '青い': 'あおい', '大空': 'おおぞら', '水滴': 'すいてき', '降る': 'ふる',
+  '吹く': 'ふく', '太陽': 'たいよう', '光る': 'ひかる', '夕方': 'ゆうがた',
+  '学校': 'がっこう', '先生': 'せんせい', '友達': 'ともだち', '教室': 'きょうしつ',
+  '勉強': 'べんきょう', '国語': 'こくご', '算数': 'さんすう', '理科': 'りか',
+  '社会': 'しゃかい', '音楽': 'おんがく', '図工': 'ずこう', '体育': 'たいいく',
+  '家族': 'かぞく', '約束': 'やくそく', '時計': 'とけい', '時間': 'じかん',
+  '毎日': 'まいにち', '生活': 'せいかつ', '未来': 'みらい', '希望': 'きぼう',
+  '世界': 'せかい', '協力': 'きょうりょく', '元気': 'げんき', '安心': 'あんしん',
+  '大切': 'たいせつ', '練習': 'れんしゅう', '挑戦': 'ちょうせん', '克服': 'こくふく',
+  '雨': 'あめ', '空': 'そら', '風': 'かぜ', '月': 'つき', '日': 'ひ', '夜': 'よる',
+  '朝': 'あさ', '昼': 'ひる', '山': 'やま', '川': 'かわ', '海': 'うみ', '木': 'き',
+  '花': 'はな', '草': 'くさ', '本': 'ほん', '犬': 'いぬ', '猫': 'ねこ', '鳥': 'とり',
+  '魚': 'さかな', '手': 'て', '足': 'あし', '目': 'め', '耳': 'みみ', '口': 'くち'
+};
+
+function addFurigana(text, forceShow = false) {
+  if (!text || typeof text !== 'string') return text || '';
+  if (!isFuriganaEnabled && !forceShow) return text;
+  if (text.includes('<ruby>')) return text;
+
+  let result = text;
+  const sortedKeys = Object.keys(FURIGANA_DICT).sort((a, b) => b.length - a.length);
+
+  for (const kanji of sortedKeys) {
+    if (result.includes(kanji)) {
+      const kana = FURIGANA_DICT[kanji];
+      const regex = new RegExp(`(?<!<rt>|【|">)${kanji}(?!<\/rt>|】)`, 'g');
+      result = result.replace(regex, `<ruby>${kanji}<rt>${kana}</rt></ruby>`);
+    }
+  }
+
+  return result;
+}
+
+function toggleFurigana(forceState = null) {
+  if (forceState !== null) {
+    isFuriganaEnabled = forceState;
+  } else {
+    isFuriganaEnabled = !isFuriganaEnabled;
+    SoundFx.playTap();
+  }
+
+  document.body.classList.toggle('furigana-off', !isFuriganaEnabled);
+
+  const mainBtnText = document.getElementById('furigana-toggle-text');
+  if (mainBtnText) {
+    mainBtnText.textContent = isFuriganaEnabled ? 'ふりがな: ON' : 'ふりがな: OFF';
+  }
+
+  document.querySelectorAll('.btn-toggle-furigana').forEach(btn => {
+    btn.classList.toggle('active', isFuriganaEnabled);
+  });
+
+  if (currentScreen === 'screen-quiz') {
+    renderQuestion();
+  } else if (currentScreen === 'screen-writing-quiz') {
+    renderWritingQuestion();
+  } else if (currentScreen === 'screen-math-quiz') {
+    renderMathQuestion();
+  }
+}
+
+// =============================================
+//  🪙 学年別ポイント比率 ＆ 保護者カスタム設定 (v25)
+// =============================================
+function getPointPerQuestion(acc, subject) {
+  if (!acc) return 1.0;
+  const grade = getGradeForAccount(acc) || 5;
+
+  // 保護者のカスタム設定があればそれを優先
+  if (acc.customPointWeights && typeof acc.customPointWeights[subject] === 'number') {
+    return acc.customPointWeights[subject];
+  }
+
+  // 学年デフォルト比率
+  if (subject === 'kanji') {
+    return (grade <= 2) ? 1.0 : 0.2; // 1〜2年生は 1.0pt、3年生以上は 0.2pt
+  }
+  if (subject === 'writing') return 1.0;
+  if (subject === 'math') return 1.0;
+  if (subject === 'typing') return 0.4;
+  return 1.0;
+}
+
+// =============================================
+//  DIFFICULTY & POINT CALCULATION (漢字読みクイズ)
 // =============================================
 function calcQuestionPoint(q) {
-  const basePoints = 0.2;
+  const acc = accounts[currentAccountId];
+  const basePoints = getPointPerQuestion(acc, 'kanji');
   const bonus = q.isWeakRevenge ? 0.2 : 0;
   const total = Math.round((basePoints + bonus) * 100) / 100;
 
@@ -2188,25 +2358,25 @@ function renderQuestion() {
   const hasBrackets = text.includes('【') && text.includes('】');
 
   if (hasBrackets) {
-    qLabel.textContent = '赤いわくの漢字の「読み方」は？';
+    qLabel.innerHTML = addFurigana('赤いわくの漢字の「読み方」は？');
     kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-sentence';
     const highlighted = text.replace(/【(.*?)】/g, '<span class="target-kanji-highlight serif-text">$1</span>');
-    kanjiCharEl.innerHTML = `<span class="sentence-text">${highlighted}</span>`;
+    kanjiCharEl.innerHTML = `<span class="sentence-text">${addFurigana(highlighted)}</span>`;
   } else if (text.length === 1) {
-    qLabel.textContent = 'この漢字の「読み方」は？';
+    qLabel.innerHTML = addFurigana('この漢字の「読み方」は？');
     kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-single';
     kanjiCharEl.innerHTML = `<span class="single-kanji serif-text">${text}</span>`;
   } else if (text.length <= 4) {
-    qLabel.textContent = 'この言葉の「読み方」は？';
+    qLabel.innerHTML = addFurigana('この言葉の「読み方」は？');
     kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-word';
     kanjiCharEl.innerHTML = `<span class="word-kanji serif-text">${text}</span>`;
   } else {
-    qLabel.textContent = 'この言葉の「読み方」は？';
+    qLabel.innerHTML = addFurigana('この言葉の「読み方」は？');
     kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-phrase';
     kanjiCharEl.innerHTML = `<span class="phrase-kanji serif-text">${text}</span>`;
   }
 
-  document.getElementById('example-sentence').textContent = q.hint ? `💡 意味: ${q.hint}` : '';
+  document.getElementById('example-sentence').innerHTML = q.hint ? addFurigana(`💡 意味: ${q.hint}`) : '';
 
   // 選択肢（明朝体）
   const grid = document.getElementById('choices-grid');
@@ -2218,7 +2388,7 @@ function renderQuestion() {
     btn.setAttribute('role', 'listitem');
     btn.id = `choice-${i}`;
     btn.style.setProperty('--i', i);
-    btn.innerHTML = `<span class="choice-text serif-text">${choice}</span>`;
+    btn.innerHTML = `<span class="choice-text serif-text">${addFurigana(choice)}</span>`;
     btn.addEventListener('click', () => handleChoice(btn, choice, q));
     grid.appendChild(btn);
   });
@@ -2587,11 +2757,15 @@ function renderMathQuestion() {
   bar.style.width = pct + '%';
   bar.parentElement.setAttribute('aria-valuenow', pct);
 
+  const acc = accounts[currentAccountId];
+  const mathPts = getPointPerQuestion(acc, 'math');
+  q.points = mathPts;
+
   document.getElementById('math-genre-badge').textContent = q.genre || '算数計算';
-  document.getElementById('math-point-badge-text').textContent = `正解で +${q.points}pt`;
+  document.getElementById('math-point-badge-text').textContent = `正解で +${mathPts}pt`;
   document.getElementById('math-expr-text').textContent = q.expr;
-  document.getElementById('math-question-text').textContent = q.text || '計算の答えを入力してね！';
-  document.getElementById('math-hint-box').textContent = q.hint ? `💡 ヒント: ${q.hint}` : '';
+  document.getElementById('math-question-text').innerHTML = addFurigana(q.text || '計算の答えを入力してね！');
+  document.getElementById('math-hint-box').innerHTML = q.hint ? addFurigana(`💡 ヒント: ${q.hint}`) : '';
 
   const fb = document.getElementById('math-feedback-overlay');
   fb.classList.remove('show');
@@ -3956,9 +4130,9 @@ function renderWritingQuestion() {
 
   // 問題文（【】部分をハイライト）
   const formattedSentence = q.q.replace(/【(.*?)】/g, '<mark>$1</mark>');
-  document.getElementById('writing-question-sentence').innerHTML = formattedSentence;
+  document.getElementById('writing-question-sentence').innerHTML = addFurigana(formattedSentence);
   document.getElementById('writing-target-reading-text').textContent = q.reading || '';
-  document.getElementById('writing-hint-text').textContent = `💡 ヒント：${q.hint || ''}`;
+  document.getElementById('writing-hint-text').innerHTML = addFurigana(`💡 ヒント：${q.hint || ''}`);
   document.getElementById('writing-stroke-text').textContent = `✏️ 画数：${q.stroke || '―'}画`;
 
   // 見本オーバーレイ文字
@@ -4054,11 +4228,11 @@ async function checkWritingAnswer() {
 function handleWritingGrading(isCorrect) {
   const q = writingQuestions[writingCurrentIndex];
   const acc = accounts[currentAccountId];
+  const pts = getPointPerQuestion(acc, 'writing');
 
   if (isCorrect) {
     SoundFx.playCorrect();
     writingCorrectCount++;
-    const pts = 1.0; // 1問 1.0pt
     writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
   } else {
     SoundFx.playWrong();
@@ -4795,6 +4969,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputImport = document.getElementById('input-import-backup');
   if (inputImport) {
     inputImport.addEventListener('change', importDataBackup);
+  }
+
+  // 📖 ふりがな（ルビ）トグルイベント
+  document.querySelectorAll('.btn-toggle-furigana').forEach(btn => {
+    btn.addEventListener('click', () => toggleFurigana());
+  });
+
+  // 🪙 保護者ポイント比率設定イベント
+  const btnSaveWeights = document.getElementById('btn-save-point-weights');
+  if (btnSaveWeights) {
+    btnSaveWeights.addEventListener('click', savePointWeights);
+  }
+  const btnResetWeights = document.getElementById('btn-reset-point-weights');
+  if (btnResetWeights) {
+    btnResetWeights.addEventListener('click', resetPointWeights);
   }
 
   // 🔥 ストリーク・学習カレンダーイベント

@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん24 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん25 🌸</span>
       </div>
     </div>
   </div>
@@ -212,6 +212,10 @@
           <span class="portal-account-name" id="portal-account-name">たろう</span>
           <span class="portal-grade-pill" id="portal-grade-pill">5年生</span>
         </div>
+        <!-- 📖 全問ふりがな（ルビ）トグルボタン -->
+        <button id="btn-toggle-furigana" class="btn-toggle-furigana" title="すべての漢字にふりがな（ルビ）をつける">
+          <span>📖</span> <span id="furigana-toggle-text">ふりがな: ON</span>
+        </button>
         <!-- 🔥 連続ログイン（ストリーク）バッジ -->
         <button id="portal-streak-badge" class="portal-streak-badge" title="がんばりカレンダーを見る">
           <span class="streak-flame">🔥</span>
@@ -287,7 +291,7 @@
         <div class="subject-card pop-card subject-kanji" id="card-subject-kanji">
           <div class="subject-card-header">
             <span class="subject-badge">📚 国語</span>
-            <span class="subject-points-hint">🪙 0.2pt/問</span>
+            <span class="subject-points-hint" id="portal-kanji-pts-hint">🪙 1.0pt/問</span>
           </div>
           <div class="subject-icon pop-bounce">漢</div>
           <h3 class="subject-title">漢字ドリル</h3>
@@ -306,7 +310,7 @@
         <div class="subject-card pop-card subject-writing" id="card-subject-writing">
           <div class="subject-card-header">
             <span class="subject-badge writing">✍️ 書き取り</span>
-            <span class="subject-points-hint">🪙 1.0pt/問</span>
+            <span class="subject-points-hint" id="portal-writing-pts-hint">🪙 1.0pt/問</span>
           </div>
           <div class="subject-icon pop-bounce">✍️</div>
           <h3 class="subject-title">漢字書き取り</h3>
@@ -324,7 +328,7 @@
         <div class="subject-card pop-card subject-math" id="card-subject-math">
           <div class="subject-card-header">
             <span class="subject-badge math">🔢 算数</span>
-            <span class="subject-points-hint">🪙 1.0pt/問</span>
+            <span class="subject-points-hint" id="portal-math-pts-hint">🪙 1.0pt/問</span>
           </div>
           <div class="subject-icon pop-bounce">➕</div>
           <h3 class="subject-title">算数クエスト</h3>
@@ -342,7 +346,7 @@
         <div class="subject-card pop-card subject-typing" id="card-subject-typing">
           <div class="subject-card-header">
             <span class="subject-badge typing">⌨️ タイピング</span>
-            <span class="subject-points-hint">🪙 0.1〜0.4pt</span>
+            <span class="subject-points-hint" id="portal-typing-pts-hint">🪙 0.1〜0.4pt</span>
           </div>
           <div class="subject-icon pop-bounce">⌨️</div>
           <h3 class="subject-title">ローマ字タイピング</h3>
@@ -358,7 +362,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん24 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん25 🌸</span>
       </div>
     </div>
   </div>
@@ -638,6 +642,9 @@
           <span class="q-num-total" id="math-q-total">10</span>
         </div>
         <div class="quiz-top-right">
+          <button id="btn-toggle-furigana-math" class="btn-toggle-furigana header-compact" title="ふりがな（ルビ）の表示切替">
+            <span>📖</span> <span class="furigana-text-sync">ふりがな</span>
+          </button>
           <button id="btn-math-skip" class="btn-skip-pill" title="この問題をスキップ（ペナルティなし）">
             <span>⏭️</span> スキップ
           </button>
@@ -1107,6 +1114,9 @@
           <span class="quiz-grade-tag" id="writing-quiz-grade-tag">5年生の漢字</span>
         </div>
         <div class="writing-top-right-actions">
+          <button id="btn-toggle-furigana-writing" class="btn-toggle-furigana header-compact" title="ふりがな（ルビ）の表示切替">
+            <span>📖</span> <span class="furigana-text-sync">ふりがな</span>
+          </button>
           <button id="btn-writing-skip" class="btn-skip-pill" title="この問題をスキップ（ペナルティなし）">
             <span>⏭️</span> スキップ
           </button>
@@ -1454,6 +1464,53 @@
               </button>
             </div>
 
+            <!-- 💰 1問あたりのポイント設定（学年別・自由カスタム） -->
+            <div class="parent-point-weights-box">
+              <h5 class="parent-section-subtitle">🪙 1問あたりの獲得ポイント設定</h5>
+              <p class="parent-weights-desc">
+                ※初期値はお子様の学年に合わせて自動調整されています（1〜2年生は漢字ドリルも1.0pt）。<br>
+                ご家庭の方針に合わせて自由に変更できます。
+              </p>
+              <div class="weights-grid">
+                <div class="weight-item">
+                  <label for="cfg-weight-kanji">📚 漢字ドリル（選択式）:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-kanji" class="form-input pop-input-sm" value="1.0" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
+                <div class="weight-item">
+                  <label for="cfg-weight-writing">✍️ 漢字書き取りドリル:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-writing" class="form-input pop-input-sm" value="1.0" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
+                <div class="weight-item">
+                  <label for="cfg-weight-math">🔢 算数クエスト:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-math" class="form-input pop-input-sm" value="1.0" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
+                <div class="weight-item">
+                  <label for="cfg-weight-typing">⌨️ ローマ字タイピング（基準）:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-typing" class="form-input pop-input-sm" value="0.4" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
+              </div>
+              <div class="weights-btn-row">
+                <button id="btn-save-point-weights" class="btn-pop-primary btn-sm">
+                  <span>💾</span> ポイント比率を保存する
+                </button>
+                <button id="btn-reset-point-weights" class="btn-pop-secondary btn-sm">
+                  <span>🔄</span> 学年おすすめ設定に戻す
+                </button>
+              </div>
+            </div>
+
             <!-- 上限設定エリア（iPad上で親が可変設定） -->
             <div class="parent-config-box">
               <h5 class="parent-section-subtitle">⚙️ ポイント上限の設定</h5>
@@ -1691,10 +1748,10 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260826_v24"></script>
-  <script src="writing_data.js?v=20260826_v24"></script>
-  <script src="math_data.js?v=20260826_v24"></script>
-  <script src="typing_data.js?v=20260826_v24"></script>
-  <script src="app.js?v=20260826_v24"></script>
+  <script src="quiz_data.js?v=20260826_v25"></script>
+  <script src="writing_data.js?v=20260826_v25"></script>
+  <script src="math_data.js?v=20260826_v25"></script>
+  <script src="typing_data.js?v=20260826_v25"></script>
+  <script src="app.js?v=20260826_v25"></script>
 </body>
 </html>

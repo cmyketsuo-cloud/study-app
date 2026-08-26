@@ -5845,6 +5845,125 @@ body {
   border: 1px solid #e2e8f0;
 }
 
+/* =============================================
+   📖 FURIGANA (RUBY) & POINT WEIGHTS (v25)
+   ============================================= */
+
+/* Ruby & RT Typography Styling */
+ruby {
+  ruby-position: over;
+  ruby-align: center;
+  line-height: 1.6;
+}
+rt {
+  font-size: 0.6em;
+  font-weight: 800;
+  color: #3b82f6;
+  user-select: none;
+  transform: translateY(-1px);
+  line-height: 1;
+}
+.furigana-off rt {
+  display: none !important;
+}
+
+/* Furigana Toggle Button */
+.btn-toggle-furigana {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1.5px solid #93c5fd;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+}
+.btn-toggle-furigana:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+  border-color: #3b82f6;
+}
+.btn-toggle-furigana.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #1e40af;
+  color: #ffffff;
+}
+.btn-toggle-furigana.header-compact {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+/* Parent Point Weights Configuration */
+.parent-point-weights-box {
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  border: 2px solid #fde047;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+.parent-weights-desc {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #854d0e;
+  line-height: 1.4;
+  margin-bottom: 0.75rem;
+}
+.weights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+@media (max-width: 640px) {
+  .weights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.weight-item {
+  background: #ffffff;
+  border: 1.5px solid #fef08a;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.weight-item label {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #713f12;
+}
+.weight-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.weight-input-wrap input {
+  width: 90px;
+  font-weight: 900;
+  font-size: 1rem;
+  color: #ca8a04;
+  text-align: right;
+  padding: 0.25rem 0.5rem;
+}
+.weight-input-wrap span {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #854d0e;
+}
+.weights-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+
 
 
 
