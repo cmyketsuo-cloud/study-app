@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん22 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん23 🌸</span>
       </div>
     </div>
   </div>
@@ -349,7 +349,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん22 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん23 🌸</span>
       </div>
     </div>
   </div>
@@ -1158,32 +1158,57 @@
             </div>
           </div>
 
-          <!-- マス目キャンバスコンテナ -->
+          <!-- マス目キャンバスコンテナ（1文字/2文字縦並び両対応） -->
           <div class="writing-canvas-container" id="writing-canvas-container">
-            <!-- 背景の十字リーダー線マス目 -->
-            <div class="writing-grid-lines">
-              <div class="grid-line horizontal"></div>
-              <div class="grid-line vertical"></div>
+            <!-- 1文字目マス -->
+            <div class="writing-cell" id="writing-cell-1">
+              <div class="writing-cell-label" id="writing-cell-label-1">1文字目</div>
+              <div class="writing-grid-lines">
+                <div class="grid-line horizontal"></div>
+                <div class="grid-line vertical"></div>
+              </div>
+              <canvas id="writing-canvas-1" class="writing-canvas" width="300" height="300"></canvas>
+              <div id="writing-sample-overlay-1" class="writing-sample-overlay" style="display:none;">
+                <span id="writing-sample-kanji-1" class="writing-sample-kanji">空</span>
+              </div>
             </div>
 
-            <!-- 描画用 HTML5 Canvas -->
-            <canvas id="writing-canvas" class="writing-canvas" width="340" height="340"></canvas>
-
-            <!-- 見本重ね合わせオーバーレイ -->
-            <div id="writing-sample-overlay" class="writing-sample-overlay" style="display:none;">
-              <span id="writing-sample-kanji" class="writing-sample-kanji">空</span>
+            <!-- 2文字目マス（二字熟語用・縦並び） -->
+            <div class="writing-cell" id="writing-cell-2" style="display:none;">
+              <div class="writing-cell-label" id="writing-cell-label-2">2文字目</div>
+              <div class="writing-grid-lines">
+                <div class="grid-line horizontal"></div>
+                <div class="grid-line vertical"></div>
+              </div>
+              <canvas id="writing-canvas-2" class="writing-canvas" width="300" height="300"></canvas>
+              <div id="writing-sample-overlay-2" class="writing-sample-overlay" style="display:none;">
+                <span id="writing-sample-kanji-2" class="writing-sample-kanji">界</span>
+              </div>
             </div>
           </div>
 
-          <!-- 答え合わせ ＆ 採点アクションエリア -->
+          <!-- 答え合わせ ＆ AI判定アクションエリア -->
           <div class="writing-actions-area">
-            <!-- 答え合わせ前ボタン -->
+            <!-- AI自動判定ボタン -->
             <button id="btn-writing-check-answer" class="btn-pop-primary btn-check-answer">
-              <span>👁️</span> こたえ合わせ（見本を見る）
+              <span>🔍</span> AI自動判定（こたえ合わせ）
             </button>
 
-            <!-- 答え合わせ後: 自己採点 ＆ 重ね合わせトグル -->
+            <!-- 読み取り中インジケータ -->
+            <div id="writing-ai-loading" class="writing-ai-loading" style="display:none;">
+              <span class="ai-spinner">🔄</span>
+              <span>AIが文字を読み取っています...</span>
+            </div>
+
+            <!-- 判定結果 ＆ 救済エリア -->
             <div id="writing-grading-area" class="writing-grading-area" style="display:none;">
+              <!-- 認識結果バッジ -->
+              <div class="ai-recognized-banner" id="ai-recognized-banner">
+                <div class="ai-tag">🤖 AI読み取り結果</div>
+                <div class="ai-char-display" id="ai-recognized-text">【東】【京】</div>
+                <div class="ai-verdict-msg" id="ai-verdict-msg">💮 正解！バッチリ書けました！</div>
+              </div>
+
               <div class="sample-compare-toggle-wrap">
                 <label class="toggle-label">
                   <input type="checkbox" id="check-toggle-overlay" checked>
@@ -1191,15 +1216,19 @@
                 </label>
               </div>
 
-              <div class="grading-buttons-grid">
+              <div class="grading-buttons-grid" id="grading-buttons-grid">
+                <button id="btn-writing-retry-pen" class="btn-grade-btn retry">
+                  <span class="grade-icon">✍️</span>
+                  <span class="grade-label">書き直す</span>
+                </button>
                 <button id="btn-grade-correct" class="btn-grade-btn correct pop-bounce">
                   <span class="grade-icon">💮</span>
-                  <span class="grade-label">できた！（せいかい）</span>
+                  <span class="grade-label">正解！（できた）</span>
                   <span class="grade-pt">+1.0pt</span>
                 </button>
-                <button id="btn-grade-retry" class="btn-grade-btn retry">
+                <button id="btn-grade-retry" class="btn-grade-btn pass">
                   <span class="grade-icon">🌱</span>
-                  <span class="grade-label">もういっかい（おぼえ中）</span>
+                  <span class="grade-label">もういっかい（苦手登録）</span>
                 </button>
               </div>
             </div>
@@ -1572,10 +1601,10 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260826_v22"></script>
-  <script src="writing_data.js?v=20260826_v22"></script>
-  <script src="math_data.js?v=20260826_v22"></script>
-  <script src="typing_data.js?v=20260826_v22"></script>
-  <script src="app.js?v=20260826_v22"></script>
+  <script src="quiz_data.js?v=20260826_v23"></script>
+  <script src="writing_data.js?v=20260826_v23"></script>
+  <script src="math_data.js?v=20260826_v23"></script>
+  <script src="typing_data.js?v=20260826_v23"></script>
+  <script src="app.js?v=20260826_v23"></script>
 </body>
 </html>

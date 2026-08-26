@@ -1832,14 +1832,21 @@ function calcQuestionPoint(q) {
 function skipQuizQuestion() {
   if (answered) return;
   SoundFx.playTap();
-  currentIndex++;
-  if (currentIndex < quizQuestions.length) {
-    renderQuestion();
-  } else {
-    const bar = document.getElementById('progress-bar');
-    if (bar) bar.style.width = '100%';
-    setTimeout(() => showResult(), 300);
+  const acc = accounts[currentAccountId];
+  const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
+  const pool = (typeof GRADE_DATA !== 'undefined' && GRADE_DATA[grade]) ? GRADE_DATA[grade] : [];
+  const unused = pool.filter(item => !quizQuestions.some(q => q.q === item.q));
+  if (unused.length > 0) {
+    const raw = shuffle(unused)[0];
+    const newQ = {
+      ...raw,
+      grade,
+      choices: shuffle([...raw.choices]),
+      isWeakRevenge: false
+    };
+    quizQuestions.splice(currentIndex, 1, newQ);
   }
+  renderQuestion();
 }
 
 let sessionEarnedPoints = 0;
@@ -2415,14 +2422,11 @@ function submitMathAnswer() {
 function skipMathQuestion() {
   if (mathAnswered) return;
   SoundFx.playTap();
-  mathCurrentIndex++;
-  if (mathCurrentIndex < mathQuestions.length) {
-    renderMathQuestion();
-  } else {
-    const bar = document.getElementById('math-progress-bar');
-    if (bar) bar.style.width = '100%';
-    setTimeout(() => showMathResult(), 300);
-  }
+  const acc = accounts[currentAccountId];
+  const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
+  const newQ = generateMathQuestion(grade, mathSelectedMode);
+  mathQuestions.splice(mathCurrentIndex, 1, newQ);
+  renderMathQuestion();
 }
 
 function showMathResult() {
@@ -3132,13 +3136,16 @@ function handleQuestionComplete() {
 function skipTypingQuestion() {
   SoundFx.playTap();
   stopQuestionTimer();
-  typingCurrentIndex++;
   isTypingInputBlocked = false;
-  if (typingCurrentIndex < typingQuizList.length) {
-    setupTypingQuestion();
-  } else {
-    finishTypingQuiz();
+
+  const world = TYPING_WORLDS[typingSelectedWorld];
+  const pool = (world.courses && world.courses[typingSelectedCourse]) || world.courses.easy;
+  const unused = pool.filter(item => !typingQuizList.some(q => q.kanji === item.kanji));
+  if (unused.length > 0) {
+    const newQ = shuffle(unused)[0];
+    typingQuizList.splice(typingCurrentIndex, 1, newQ);
   }
+  setupTypingQuestion();
 }
 
 function finishTypingQuiz() {
@@ -3365,95 +3372,120 @@ let writingCorrectCount = 0;
 let writingEarnedPoints = 0;
 let writingSelectedCount = 5;
 
-// 手書きキャンバス管理オブジェクト
+// 手書きキャンバス管理オブジェクト（1マス/2マス縦並び両対応）
 const WritingCanvas = (() => {
-  let canvas = null;
-  let ctx = null;
+  let cells = [
+    { id: 1, canvas: null, ctx: null, undoStack: [], strokes: [], currentStroke: null },
+    { id: 2, canvas: null, ctx: null, undoStack: [], strokes: [], currentStroke: null }
+  ];
   let isDrawing = false;
+  let activeCellIdx = 0;
   let currentTool = 'pencil'; // 'pencil' | 'redpen' | 'eraser'
-  let undoStack = [];
+  let strokeStartTime = 0;
   const MAX_UNDO = 20;
 
   function init() {
-    canvas = document.getElementById('writing-canvas');
-    if (!canvas) return;
-    ctx = canvas.getContext('2d', { willReadFrequently: true });
+    cells.forEach((cell, idx) => {
+      cell.canvas = document.getElementById(`writing-canvas-${cell.id}`);
+      if (!cell.canvas) return;
+      cell.ctx = cell.canvas.getContext('2d', { willReadFrequently: true });
 
-    // 解像度（高DPI / Retina）対応
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const size = rect.width > 0 ? rect.width : 320;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    ctx.scale(dpr, dpr);
+      const dpr = window.devicePixelRatio || 1;
+      const rect = cell.canvas.getBoundingClientRect();
+      const size = rect.width > 0 ? rect.width : (idx === 0 ? 300 : 230);
+      cell.canvas.width = size * dpr;
+      cell.canvas.height = size * dpr;
+      cell.ctx.scale(dpr, dpr);
 
-    // Pointer Events（Apple Pencil・タッチ・マウス共通）
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerup', handlePointerUp);
-    canvas.addEventListener('pointercancel', handlePointerUp);
-    canvas.addEventListener('pointerleave', handlePointerUp);
+      // ポインターイベント登録
+      cell.canvas.onpointerdown = (e) => handlePointerDown(e, idx);
+      cell.canvas.onpointermove = (e) => handlePointerMove(e, idx);
+      cell.canvas.onpointerup = (e) => handlePointerUp(e, idx);
+      cell.canvas.onpointercancel = (e) => handlePointerUp(e, idx);
+      cell.canvas.onpointerleave = (e) => handlePointerUp(e, idx);
+    });
   }
 
-  function saveState() {
-    if (!ctx) return;
-    if (undoStack.length >= MAX_UNDO) undoStack.shift();
-    undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  function saveState(cellIdx) {
+    const cell = cells[cellIdx];
+    if (!cell || !cell.ctx) return;
+    if (cell.undoStack.length >= MAX_UNDO) cell.undoStack.shift();
+    cell.undoStack.push(cell.ctx.getImageData(0, 0, cell.canvas.width, cell.canvas.height));
   }
 
-  function handlePointerDown(e) {
+  function handlePointerDown(e, cellIdx) {
     e.preventDefault();
     isDrawing = true;
-    saveState();
+    activeCellIdx = cellIdx;
+    const cell = cells[cellIdx];
+    saveState(cellIdx);
 
-    const pos = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-    applyStrokeStyle(e.pressure);
+    const pos = getPos(e, cell.canvas);
+    cell.ctx.beginPath();
+    cell.ctx.moveTo(pos.x, pos.y);
+    applyStrokeStyle(cell.ctx, e.pressure);
+
+    strokeStartTime = Date.now();
+    cell.currentStroke = [ [Math.round(pos.x)], [Math.round(pos.y)], [0] ];
   }
 
-  function handlePointerMove(e) {
-    if (!isDrawing) return;
+  function handlePointerMove(e, cellIdx) {
+    if (!isDrawing || activeCellIdx !== cellIdx) return;
     e.preventDefault();
 
-    const pos = getPos(e);
-    applyStrokeStyle(e.pressure);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
+    const cell = cells[cellIdx];
+    const pos = getPos(e, cell.canvas);
+    applyStrokeStyle(cell.ctx, e.pressure);
+    cell.ctx.lineTo(pos.x, pos.y);
+    cell.ctx.stroke();
+
+    if (cell.currentStroke) {
+      const elapsed = Date.now() - strokeStartTime;
+      cell.currentStroke[0].push(Math.round(pos.x));
+      cell.currentStroke[1].push(Math.round(pos.y));
+      cell.currentStroke[2].push(elapsed);
+    }
   }
 
-  function handlePointerUp(e) {
+  function handlePointerUp(e, cellIdx) {
     if (!isDrawing) return;
     e.preventDefault();
     isDrawing = false;
-    ctx.closePath();
+    const cell = cells[cellIdx];
+    if (cell) {
+      cell.ctx.closePath();
+      if (cell.currentStroke && cell.currentStroke[0].length > 0) {
+        cell.strokes.push(cell.currentStroke);
+        cell.currentStroke = null;
+      }
+    }
   }
 
-  function getPos(e) {
-    const rect = canvas.getBoundingClientRect();
+  function getPos(e, targetCanvas) {
+    const rect = targetCanvas.getBoundingClientRect();
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     };
   }
 
-  function applyStrokeStyle(pressure) {
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+  function applyStrokeStyle(targetCtx, pressure) {
+    targetCtx.lineCap = 'round';
+    targetCtx.lineJoin = 'round';
 
     const p = pressure && pressure > 0 ? pressure : 0.6;
 
     if (currentTool === 'pencil') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 6 + p * 6; // 6〜12px
+      targetCtx.globalCompositeOperation = 'source-over';
+      targetCtx.strokeStyle = '#1e293b';
+      targetCtx.lineWidth = 5 + p * 5;
     } else if (currentTool === 'redpen') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = 6 + p * 6;
+      targetCtx.globalCompositeOperation = 'source-over';
+      targetCtx.strokeStyle = '#dc2626';
+      targetCtx.lineWidth = 5 + p * 5;
     } else if (currentTool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = 26;
+      targetCtx.globalCompositeOperation = 'destination-out';
+      targetCtx.lineWidth = 26;
     }
   }
 
@@ -3473,25 +3505,40 @@ const WritingCanvas = (() => {
   }
 
   function undo() {
-    if (!ctx || undoStack.length === 0) return;
+    const cell = cells[activeCellIdx];
+    if (!cell || !cell.ctx || cell.undoStack.length === 0) return;
     SoundFx.playTap();
-    const last = undoStack.pop();
-    ctx.putImageData(last, 0, 0);
+    const last = cell.undoStack.pop();
+    cell.ctx.putImageData(last, 0, 0);
+    if (cell.strokes.length > 0) cell.strokes.pop();
   }
 
   function clear() {
-    if (!canvas || !ctx) return;
     SoundFx.playTap();
-    saveState();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    cells.forEach((cell, idx) => {
+      if (cell.canvas && cell.ctx) {
+        saveState(idx);
+        cell.ctx.clearRect(0, 0, cell.canvas.width, cell.canvas.height);
+        cell.strokes = [];
+        cell.currentStroke = null;
+      }
+    });
   }
 
   function reset() {
-    undoStack = [];
-    if (ctx && canvas) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    cells.forEach(cell => {
+      cell.undoStack = [];
+      cell.strokes = [];
+      cell.currentStroke = null;
+      if (cell.ctx && cell.canvas) {
+        cell.ctx.clearRect(0, 0, cell.canvas.width, cell.canvas.height);
+      }
+    });
     setTool('pencil');
+  }
+
+  function getStrokes(cellIdx) {
+    return (cells[cellIdx] && cells[cellIdx].strokes) || [];
   }
 
   return {
@@ -3499,9 +3546,50 @@ const WritingCanvas = (() => {
     setTool,
     undo,
     clear,
-    reset
+    reset,
+    getStrokes
   };
 })();
+
+// Google 手書き文字認識 API 呼び出し
+async function recognizeHandwritingAPI(strokes, width = 300, height = 300) {
+  if (!strokes || strokes.length === 0) return [];
+
+  const payload = {
+    app_version: 0.4,
+    api_level: "537.36",
+    device: "5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+    input_type: "0",
+    options: "enable_pre_space",
+    requests: [
+      {
+        writing_guide: {
+          writing_area_width: width,
+          writing_area_height: height
+        },
+        ink: strokes,
+        language: "ja"
+      }
+    ]
+  };
+
+  try {
+    const res = await fetch('https://inputtools.google.com/request?itc=ja-t-i0-handwrit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) throw new Error('API response not ok');
+    const data = await res.json();
+    if (data && data[0] === 'SUCCESS' && data[1] && data[1][0] && data[1][0][1]) {
+      return data[1][0][1]; // 認識候補の配列（例: ['東', '束', '果', ...]）
+    }
+  } catch (err) {
+    console.warn('Handwriting API fallback:', err);
+  }
+  return [];
+}
 
 // 出題生成ロジック（現学年70% ＋ 前学年30%）
 function generateWritingQuestions(grade, count) {
@@ -3559,16 +3647,29 @@ function startWritingQuiz() {
 
   showScreen('screen-writing-quiz');
   setTimeout(() => {
-    WritingCanvas.init();
     renderWritingQuestion();
   }, 100);
 }
 
 function renderWritingQuestion() {
-  WritingCanvas.reset();
-
   const q = writingQuestions[writingCurrentIndex];
   if (!q) return;
+
+  const isDouble = q.kanji.length >= 2;
+  const container = document.getElementById('writing-canvas-container');
+  const cell2 = document.getElementById('writing-cell-2');
+
+  if (isDouble) {
+    if (container) container.classList.add('double-mode');
+    if (cell2) cell2.style.display = 'block';
+  } else {
+    if (container) container.classList.remove('double-mode');
+    if (cell2) cell2.style.display = 'none';
+  }
+
+  // キャンバスの再初期化とクリア
+  WritingCanvas.init();
+  WritingCanvas.reset();
 
   // 上部プログレス
   document.getElementById('writing-quiz-step').textContent = `第 ${writingCurrentIndex + 1} 問 / ${writingQuestions.length} 問`;
@@ -3583,25 +3684,94 @@ function renderWritingQuestion() {
   document.getElementById('writing-hint-text').textContent = `💡 ヒント：${q.hint || ''}`;
   document.getElementById('writing-stroke-text').textContent = `✏️ 画数：${q.stroke || '―'}画`;
 
-  // 見本オーバーレイ
-  document.getElementById('writing-sample-kanji').textContent = q.kanji;
-  const overlay = document.getElementById('writing-sample-overlay');
-  overlay.style.display = 'none';
+  // 見本オーバーレイ文字
+  const sample1 = document.getElementById('writing-sample-kanji-1');
+  if (sample1) sample1.textContent = q.kanji[0] || '';
+  const sample2 = document.getElementById('writing-sample-kanji-2');
+  if (sample2) sample2.textContent = q.kanji[1] || '';
+
+  const overlay1 = document.getElementById('writing-sample-overlay-1');
+  if (overlay1) overlay1.style.display = 'none';
+  const overlay2 = document.getElementById('writing-sample-overlay-2');
+  if (overlay2) overlay2.style.display = 'none';
 
   // 答え合わせ前状態
   document.getElementById('btn-writing-check-answer').style.display = 'block';
+  document.getElementById('writing-ai-loading').style.display = 'none';
   document.getElementById('writing-grading-area').style.display = 'none';
   document.getElementById('check-toggle-overlay').checked = true;
 }
 
-function checkWritingAnswer() {
-  SoundFx.playTap();
-  document.getElementById('btn-writing-check-answer').style.display = 'none';
-  document.getElementById('writing-grading-area').style.display = 'flex';
+function updateWritingOverlays(show) {
+  const overlay1 = document.getElementById('writing-sample-overlay-1');
+  if (overlay1) overlay1.style.display = show ? 'flex' : 'none';
+  const overlay2 = document.getElementById('writing-sample-overlay-2');
+  if (overlay2) overlay2.style.display = show ? 'flex' : 'none';
+}
 
-  const overlay = document.getElementById('writing-sample-overlay');
-  const toggle = document.getElementById('check-toggle-overlay');
-  overlay.style.display = toggle.checked ? 'flex' : 'none';
+async function checkWritingAnswer() {
+  SoundFx.playTap();
+  const q = writingQuestions[writingCurrentIndex];
+  if (!q) return;
+
+  const targetKanji = q.kanji;
+  const isDouble = targetKanji.length >= 2;
+
+  // ボタンを非表示にし、AI判定中ローディングを表示
+  document.getElementById('btn-writing-check-answer').style.display = 'none';
+  const loadingEl = document.getElementById('writing-ai-loading');
+  if (loadingEl) loadingEl.style.display = 'flex';
+
+  const strokes1 = WritingCanvas.getStrokes(0);
+  const strokes2 = isDouble ? WritingCanvas.getStrokes(1) : [];
+
+  // Google Handwriting API で認識
+  const [candidates1, candidates2] = await Promise.all([
+    recognizeHandwritingAPI(strokes1, 260, 260),
+    isDouble ? recognizeHandwritingAPI(strokes2, 260, 260) : Promise.resolve([])
+  ]);
+
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  // 認識された文字プレビュー
+  const char1 = candidates1[0] || (strokes1.length === 0 ? '（未入力）' : '？');
+  const char2 = isDouble ? (candidates2[0] || (strokes2.length === 0 ? '（未入力）' : '？')) : '';
+
+  // 判定: 上位8候補以内に正解漢字が含まれているか
+  const match1 = candidates1.slice(0, 8).includes(targetKanji[0]);
+  const match2 = isDouble ? candidates2.slice(0, 8).includes(targetKanji[1]) : true;
+  const isCorrect = match1 && match2;
+
+  const textEl = document.getElementById('ai-recognized-text');
+  const msgEl = document.getElementById('ai-verdict-msg');
+
+  if (textEl) {
+    textEl.textContent = isDouble ? `【${char1}】【${char2}】` : `【${char1}】`;
+  }
+
+  if (msgEl) {
+    if (isCorrect) {
+      msgEl.className = 'ai-verdict-msg';
+      msgEl.textContent = '💮 正解！バッチリ書けました！';
+    } else {
+      msgEl.className = 'ai-verdict-msg wrong';
+      msgEl.textContent = `惜しい！【${targetKanji}】と書こう（AI認識: ${isDouble ? char1 + '・' + char2 : char1}）`;
+    }
+  }
+
+  // 判定エリアとお手本表示
+  document.getElementById('writing-grading-area').style.display = 'flex';
+  updateWritingOverlays(true);
+
+  if (isCorrect) {
+    SoundFx.playCorrect();
+    // 正解時は自動で1.2秒後に次へ
+    setTimeout(() => {
+      handleWritingGrading(true);
+    }, 1200);
+  } else {
+    SoundFx.playWrong();
+  }
 }
 
 function handleWritingGrading(isCorrect) {
@@ -3642,14 +3812,15 @@ function handleWritingGrading(isCorrect) {
 
 function skipWritingQuestion() {
   SoundFx.playTap();
-  writingCurrentIndex++;
-  if (writingCurrentIndex < writingQuestions.length) {
-    renderWritingQuestion();
-  } else {
-    const bar = document.getElementById('writing-quiz-progress-bar');
-    if (bar) bar.style.width = '100%';
-    setTimeout(() => showWritingResult(), 300);
+  const acc = accounts[currentAccountId];
+  const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
+  const pool = (typeof WRITING_DATA !== 'undefined' && WRITING_DATA[grade]) ? WRITING_DATA[grade] : [];
+  const unused = pool.filter(item => !writingQuestions.some(q => q.kanji === item.kanji));
+  if (unused.length > 0) {
+    const newQ = { ...shuffle(unused)[0], grade };
+    writingQuestions.splice(writingCurrentIndex, 1, newQ);
   }
+  renderWritingQuestion();
 }
 
 function showWritingResult() {
@@ -4175,11 +4346,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCheckAnswer = document.getElementById('btn-writing-check-answer');
   if (btnCheckAnswer) btnCheckAnswer.addEventListener('click', checkWritingAnswer);
 
+  const btnRetryPen = document.getElementById('btn-writing-retry-pen');
+  if (btnRetryPen) {
+    btnRetryPen.addEventListener('click', () => {
+      SoundFx.playTap();
+      WritingCanvas.clear();
+      document.getElementById('writing-grading-area').style.display = 'none';
+      document.getElementById('btn-writing-check-answer').style.display = 'block';
+      updateWritingOverlays(false);
+    });
+  }
+
   const toggleOverlay = document.getElementById('check-toggle-overlay');
   if (toggleOverlay) {
     toggleOverlay.addEventListener('change', (e) => {
-      const overlay = document.getElementById('writing-sample-overlay');
-      if (overlay) overlay.style.display = e.target.checked ? 'flex' : 'none';
+      updateWritingOverlays(e.target.checked);
     });
   }
 
