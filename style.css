@@ -5467,6 +5467,385 @@ body {
   gap: 0.5rem;
 }
 
+/* =============================================
+   🔥 STREAK BADGE & STUDY CALENDAR STYLES (v24)
+   ============================================= */
+
+/* Portal Streak Badge */
+.portal-streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1.5px solid #fdba74;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.15);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+}
+.portal-streak-badge:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+  border-color: #f97316;
+}
+.streak-flame {
+  font-size: 1.15rem;
+  animation: flamePulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes flamePulse {
+  0% { transform: scale(1) rotate(-3deg); }
+  100% { transform: scale(1.2) rotate(4deg); }
+}
+.streak-text {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #c2410c;
+}
+.streak-text strong {
+  font-size: 1rem;
+  color: #ea580c;
+}
+
+/* Portal Calendar Button */
+.btn-portal-calendar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #15803d;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+}
+.btn-portal-calendar:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.22);
+  border-color: #22c55e;
+}
+
+/* Login Bonus Modal */
+.modal-login-bonus-card {
+  background: linear-gradient(160deg, #ffffff 0%, #fff7ed 100%);
+  border: 3.5px solid #fb923c;
+  border-radius: var(--radius-xl);
+  padding: 2rem 1.75rem;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(234, 88, 12, 0.25);
+}
+.bonus-ribbon {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 900;
+  padding: 0.35rem 1.25rem;
+  border-radius: 9999px;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+}
+.bonus-flame-icon {
+  font-size: 3.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  animation: flamePulse 1s ease-in-out infinite alternate;
+}
+.bonus-title {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: #9a3412;
+  margin-bottom: 0.25rem;
+}
+.bonus-title span {
+  font-size: 1.8rem;
+  color: #ea580c;
+}
+.bonus-sub {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #c2410c;
+  margin-bottom: 1.25rem;
+}
+.bonus-point-card {
+  background: #ffffff;
+  border: 2px dashed #fdba74;
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+.bonus-coin-icon {
+  font-size: 2rem;
+}
+.bonus-point-val {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: #ea580c;
+}
+.bonus-point-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #78716c;
+}
+.btn-bonus-claim {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.35);
+}
+
+/* Study Calendar / Stamp Book Modal */
+.calendar-modal-card {
+  background: #ffffff;
+  border: 3px solid #e2e8f0;
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  max-width: 540px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+}
+.calendar-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 0.75rem;
+}
+.calendar-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.calendar-icon {
+  font-size: 1.75rem;
+}
+.calendar-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #1e293b;
+  margin: 0;
+}
+.calendar-sub {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #64748b;
+  margin: 0;
+}
+
+.calendar-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  background: #f8fafc;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #e2e8f0;
+}
+.btn-calendar-nav {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-calendar-nav:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+.calendar-current-month {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #1e293b;
+}
+
+/* Calendar Summary */
+.calendar-summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.calendar-sum-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.sum-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+}
+.sum-val {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+.sum-val strong {
+  font-size: 1.15rem;
+  color: #4f46e5;
+}
+
+/* Calendar Grid */
+.calendar-grid-wrap {
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #f1f5f9;
+  border-bottom: 1.5px solid #e2e8f0;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #475569;
+  padding: 0.4rem 0;
+}
+.weekday.sun { color: #dc2626; }
+.weekday.sat { color: #2563eb; }
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #ffffff;
+}
+.cal-day-cell {
+  min-height: 54px;
+  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.cal-day-cell:nth-child(7n) {
+  border-right: none;
+}
+.cal-day-cell:hover {
+  background: #f8fafc;
+}
+.cal-day-cell.empty {
+  background: #fafafa;
+  cursor: default;
+}
+.cal-day-cell.today {
+  background: #eff6ff;
+}
+.cal-day-cell.selected {
+  background: #ede9fe;
+  outline: 2px solid #6366f1;
+  z-index: 2;
+}
+
+.cal-day-num {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #334155;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+.cal-day-cell.today .cal-day-num {
+  background: #2563eb;
+  color: #ffffff;
+}
+.cal-day-cell.sun .cal-day-num { color: #dc2626; }
+.cal-day-cell.sat .cal-day-num { color: #2563eb; }
+.cal-day-cell.today.sun .cal-day-num,
+.cal-day-cell.today.sat .cal-day-num { color: #ffffff; }
+
+.cal-stamp {
+  font-size: 1.25rem;
+  line-height: 1;
+  margin-top: 2px;
+  animation: popBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Day Detail Card */
+.calendar-day-detail-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  animation: popFadeIn 0.25s ease;
+}
+.day-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.35rem;
+}
+.day-detail-date {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #1e293b;
+}
+.day-detail-total-pt {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ea580c;
+}
+.day-detail-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.day-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #475569;
+}
+.day-item-tag {
+  background: #ffffff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+
 
 
 

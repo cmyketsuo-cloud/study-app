@@ -744,10 +744,271 @@ function selectAccount(id) {
   renderPortalScreen();
 }
 
+// =============================================
+//  🔥 STREAK & STUDY CALENDAR LOGIC (v24)
+// =============================================
+function getTodayDateString() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getYesterdayDateString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function checkAndUpdateStreak(acc) {
+  if (!acc) return;
+  if (!acc.streak) {
+    acc.streak = { currentStreak: 0, maxStreak: 0, lastLoginDate: '', lastBonusClaimedDate: '' };
+  }
+
+  const today = getTodayDateString();
+  const yesterday = getYesterdayDateString();
+
+  if (acc.streak.lastLoginDate === today) {
+    // 今日すでにログイン済み
+    return;
+  }
+
+  if (acc.streak.lastLoginDate === yesterday) {
+    acc.streak.currentStreak = (acc.streak.currentStreak || 0) + 1;
+  } else {
+    // 初回または2日以上空いた
+    acc.streak.currentStreak = 1;
+  }
+
+  acc.streak.maxStreak = Math.max(acc.streak.maxStreak || 0, acc.streak.currentStreak);
+  acc.streak.lastLoginDate = today;
+
+  // ボーナス付与判定（今日まだ受け取っていない場合）
+  if (acc.streak.lastBonusClaimedDate !== today) {
+    let bonusPts = 1.0;
+    if (acc.streak.currentStreak >= 7) bonusPts = 2.0;
+    else if (acc.streak.currentStreak >= 3) bonusPts = 1.5;
+
+    acc.pendingBonus = {
+      streak: acc.streak.currentStreak,
+      points: bonusPts
+    };
+  }
+
+  saveAccounts();
+}
+
+function showLoginBonusModal(streak, bonusPts) {
+  const modal = document.getElementById('modal-login-bonus');
+  if (!modal) return;
+
+  document.getElementById('login-bonus-streak-num').textContent = streak;
+  document.getElementById('login-bonus-points-num').textContent = formatPoints(bonusPts);
+
+  modal.style.display = 'flex';
+  SoundFx.playFanfare();
+  ConfettiFx.launch(60);
+}
+
+function claimLoginBonus() {
+  const acc = accounts[currentAccountId];
+  if (!acc || !acc.pendingBonus) {
+    document.getElementById('modal-login-bonus').style.display = 'none';
+    return;
+  }
+
+  const bonusPts = acc.pendingBonus.points;
+  const streakNum = acc.pendingBonus.streak;
+
+  acc.points = Math.round(((acc.points || 0) + bonusPts) * 100) / 100;
+  if (!acc.pointHistory) acc.pointHistory = [];
+  acc.pointHistory.push({
+    type: 'earn',
+    title: `🔥 連続ログインボーナス（${streakNum}日目）`,
+    amount: bonusPts,
+    date: Date.now()
+  });
+
+  // 学習ログにも記録
+  recordStudyLog(acc, '🔥 ログインボーナス', 1, bonusPts);
+
+  acc.streak.lastBonusClaimedDate = getTodayDateString();
+  delete acc.pendingBonus;
+
+  saveAccounts();
+  renderPortalScreen();
+  document.getElementById('modal-login-bonus').style.display = 'none';
+  SoundFx.playCorrect();
+}
+
+// 日別学習ログの記録
+function recordStudyLog(acc, subjectName, questionCount, pointsEarned) {
+  if (!acc) return;
+  if (!acc.studyLog) acc.studyLog = {};
+
+  const today = getTodayDateString();
+  if (!acc.studyLog[today]) {
+    acc.studyLog[today] = { totalPoints: 0, items: [] };
+  }
+
+  acc.studyLog[today].totalPoints = Math.round(((acc.studyLog[today].totalPoints || 0) + pointsEarned) * 100) / 100;
+  acc.studyLog[today].items.push({
+    time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+    subject: subjectName,
+    count: questionCount,
+    points: pointsEarned
+  });
+
+  saveAccounts();
+}
+
+// 学習カレンダーモーダル
+let calendarYear = new Date().getFullYear();
+let calendarMonth = new Date().getMonth(); // 0-11
+let selectedCalDate = null;
+
+function openStudyCalendarModal(accountId) {
+  SoundFx.playTap();
+  const acc = accounts[accountId];
+  if (!acc) return;
+
+  const now = new Date();
+  calendarYear = now.getFullYear();
+  calendarMonth = now.getMonth();
+  selectedCalDate = getTodayDateString();
+
+  document.getElementById('calendar-account-name').textContent = `${acc.name}さんの学習きろく`;
+  renderCalendarView();
+  document.getElementById('modal-study-calendar').style.display = 'flex';
+}
+
+function renderCalendarView() {
+  const acc = accounts[currentAccountId];
+  if (!acc) return;
+
+  // 年月ラベル
+  document.getElementById('calendar-month-label').textContent = `${calendarYear}年 ${calendarMonth + 1}月`;
+
+  // サマリー計算
+  const streak = (acc.streak && acc.streak.currentStreak) || 1;
+  document.getElementById('cal-sum-streak').textContent = streak;
+
+  const studyLog = acc.studyLog || {};
+  const prefix = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}`;
+  let monthStudyDays = 0;
+  let monthPoints = 0;
+
+  Object.keys(studyLog).forEach(dateStr => {
+    if (dateStr.startsWith(prefix)) {
+      monthStudyDays++;
+      monthPoints = Math.round((monthPoints + (studyLog[dateStr].totalPoints || 0)) * 100) / 100;
+    }
+  });
+
+  document.getElementById('cal-sum-days').textContent = monthStudyDays;
+  document.getElementById('cal-sum-points').textContent = formatPoints(monthPoints);
+
+  // カレンダーグリッド生成
+  const firstDayOfWeek = new Date(calendarYear, calendarMonth, 1).getDay(); // 0:日〜6:土
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+
+  const grid = document.getElementById('calendar-days-grid');
+  grid.innerHTML = '';
+
+  // 先頭の空白セル
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-day-cell empty';
+    grid.appendChild(empty);
+  }
+
+  const todayStr = getTodayDateString();
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayOfWeek = (firstDayOfWeek + day - 1) % 7;
+
+    const cell = document.createElement('div');
+    let cellClasses = ['cal-day-cell'];
+    if (dayOfWeek === 0) cellClasses.push('sun');
+    if (dayOfWeek === 6) cellClasses.push('sat');
+    if (dateStr === todayStr) cellClasses.push('today');
+    if (dateStr === selectedCalDate) cellClasses.push('selected');
+    cell.className = cellClasses.join(' ');
+
+    const num = document.createElement('span');
+    num.className = 'cal-day-num';
+    num.textContent = day;
+    cell.appendChild(num);
+
+    // 学習ログがある場合はスタンプを押す！
+    const dayLog = studyLog[dateStr];
+    if (dayLog && dayLog.items && dayLog.items.length > 0) {
+      const stamp = document.createElement('span');
+      stamp.className = 'cal-stamp';
+      if (dayLog.totalPoints >= 10) stamp.textContent = '👑';
+      else if (dayLog.items.length >= 3) stamp.textContent = '🌟';
+      else stamp.textContent = '💮';
+      cell.appendChild(stamp);
+    }
+
+    cell.addEventListener('click', () => {
+      selectedCalDate = dateStr;
+      renderCalendarView();
+    });
+
+    grid.appendChild(cell);
+  }
+
+  // 選択日の詳細表示
+  const currentSelectedLog = studyLog[selectedCalDate];
+  renderDayDetail(selectedCalDate, currentSelectedLog);
+}
+
+function renderDayDetail(dateStr, dayLog) {
+  const detailCard = document.getElementById('calendar-day-detail-card');
+  if (!detailCard) return;
+
+  if (!dayLog || !dayLog.items || dayLog.items.length === 0) {
+    detailCard.style.display = 'block';
+    const [y, m, d] = dateStr.split('-');
+    document.getElementById('day-detail-date').textContent = `${parseInt(m)}月${parseInt(d)}日`;
+    document.getElementById('day-detail-points').textContent = '0';
+    document.getElementById('day-detail-items').innerHTML = '<div style="font-size:0.82rem;color:#94a3b8;text-align:center;padding:0.4rem;">この日の学習きろくはありません 🌱</div>';
+    return;
+  }
+
+  detailCard.style.display = 'block';
+  const [y, m, d] = dateStr.split('-');
+  document.getElementById('day-detail-date').textContent = `${parseInt(m)}月${parseInt(d)}日`;
+  document.getElementById('day-detail-points').textContent = formatPoints(dayLog.totalPoints || 0);
+
+  const itemsContainer = document.getElementById('day-detail-items');
+  itemsContainer.innerHTML = '';
+
+  dayLog.items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'day-item-row';
+    row.innerHTML = `
+      <span class="day-item-tag">${item.subject} (${item.count}問)</span>
+      <span style="color:#059669;font-weight:900;">+${formatPoints(item.points)}pt</span>
+    `;
+    itemsContainer.appendChild(row);
+  });
+}
+
 function renderPortalScreen() {
   if (currentAccountId === null) return;
   const acc = accounts[currentAccountId];
   if (!acc || !acc.name) return;
+
+  // ストリーク更新
+  checkAndUpdateStreak(acc);
 
   const grade = getGradeForAccount(acc);
   const effectiveGrade = (grade && grade >= 1 && grade <= 6) ? grade : 5;
@@ -755,7 +1016,7 @@ function renderPortalScreen() {
 
   // ヘッダー情報
   const portalAvatarEl = document.getElementById('portal-avatar-letter');
-  const accColor = acc.themeColor || SLOT_THEMES[currentAccountId] .color;
+  const accColor = acc.themeColor || SLOT_THEMES[currentAccountId].color;
   portalAvatarEl.style.background = accColor;
   // 写真/絵文字/文字 優先順位で表示
   const existingPortalImg = portalAvatarEl.querySelector('.portal-avatar-img');
@@ -775,6 +1036,12 @@ function renderPortalScreen() {
   document.getElementById('portal-account-name').textContent = acc.name;
   document.getElementById('portal-grade-pill').textContent = gradeLabel(grade) || '5年生';
   document.getElementById('portal-points-display').textContent = formatPoints(acc.points || 0);
+
+  // 🔥 連続日数バッジ
+  const streakCountEl = document.getElementById('portal-streak-count');
+  if (streakCountEl) {
+    streakCountEl.textContent = (acc.streak && acc.streak.currentStreak) || 1;
+  }
 
   // 漢字カード情報
   const mStats = getMasteryStats(currentAccountId, effectiveGrade);
@@ -845,6 +1112,13 @@ function renderPortalScreen() {
   if (monthBarEl) monthBarEl.style.width = pctMonth + '%';
 
   showScreen('screen-portal');
+
+  // 未受取のログインボーナスがあればポップアップ！
+  if (acc.pendingBonus) {
+    setTimeout(() => {
+      showLoginBonusModal(acc.pendingBonus.streak, acc.pendingBonus.points);
+    }, 400);
+  }
 }
 
 function updateStartScreenMasteryBanner() {
@@ -2114,6 +2388,7 @@ function showResult() {
         amount: actualEarnedPoints,
         date: Date.now()
       });
+      recordStudyLog(acc, '📚 漢字ドリル', total, actualEarnedPoints);
       saveAccounts();
       renderAccountScreen();
     }
@@ -2475,6 +2750,7 @@ function showMathResult() {
         amount: actualEarnedPoints,
         date: Date.now()
       });
+      recordStudyLog(acc, '🔢 算数クエスト', total, actualEarnedPoints);
       saveAccounts();
       renderAccountScreen();
     }
@@ -3216,6 +3492,7 @@ function finishTypingQuiz() {
         amount: actualEarnedPoints,
         date: Date.now()
       });
+      recordStudyLog(acc, `⌨️ タイピング (${TYPING_WORLDS[typingSelectedWorld].name})`, typingQuizList.length, actualEarnedPoints);
 
       saveAccounts();
       renderAccountScreen();
@@ -3870,6 +4147,7 @@ function showWritingResult() {
         amount: actualEarned,
         date: Date.now()
       });
+      recordStudyLog(acc, '✍️ 漢字書き取り', total, actualEarned);
 
       saveAccounts();
       renderAccountScreen();
@@ -4517,6 +4795,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputImport = document.getElementById('input-import-backup');
   if (inputImport) {
     inputImport.addEventListener('change', importDataBackup);
+  }
+
+  // 🔥 ストリーク・学習カレンダーイベント
+  const streakBadge = document.getElementById('portal-streak-badge');
+  if (streakBadge) {
+    streakBadge.addEventListener('click', () => openStudyCalendarModal(currentAccountId));
+  }
+  const btnPortalCal = document.getElementById('btn-portal-calendar');
+  if (btnPortalCal) {
+    btnPortalCal.addEventListener('click', () => openStudyCalendarModal(currentAccountId));
+  }
+  const btnCalClose = document.getElementById('btn-calendar-close');
+  if (btnCalClose) {
+    btnCalClose.addEventListener('click', () => {
+      document.getElementById('modal-study-calendar').style.display = 'none';
+    });
+  }
+  const btnCalPrev = document.getElementById('btn-calendar-prev-month');
+  if (btnCalPrev) {
+    btnCalPrev.addEventListener('click', () => {
+      calendarMonth--;
+      if (calendarMonth < 0) {
+        calendarMonth = 11;
+        calendarYear--;
+      }
+      renderCalendarView();
+    });
+  }
+  const btnCalNext = document.getElementById('btn-calendar-next-month');
+  if (btnCalNext) {
+    btnCalNext.addEventListener('click', () => {
+      calendarMonth++;
+      if (calendarMonth > 11) {
+        calendarMonth = 0;
+        calendarYear++;
+      }
+      renderCalendarView();
+    });
+  }
+  const btnClaimBonus = document.getElementById('btn-login-bonus-claim');
+  if (btnClaimBonus) {
+    btnClaimBonus.addEventListener('click', claimLoginBonus);
   }
 
   document.getElementById('btn-change-account').addEventListener('click', () => {
