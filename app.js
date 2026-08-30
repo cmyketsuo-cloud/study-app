@@ -26,6 +26,7 @@ const ACHIEVEMENTS = [
   { id: 'math_first', title: '計算チャレンジャー', icon: '➕', desc: '算数クエストを初クリアした！', points: 2.0 },
   { id: 'math_perfect', title: '計算マスター', icon: '🏆', desc: '算数クエストで満点を達成した！', points: 2.0 },
   { id: 'math_50', title: '暗算の魔術師', icon: '🧙‍♂️', desc: '算数で累計50問正解した！', points: 3.0 },
+  { id: 'monster_slayer', title: 'ドラゴンスレイヤー', icon: '🐉', desc: '算数のモンスター討伐バトルをクリアした！', points: 3.0 },
 
   // タイピング系
   { id: 'typing_first', title: 'キーボードデビュー', icon: '⌨️', desc: 'タイピング特訓を初クリアした！', points: 2.0 },
@@ -46,7 +47,52 @@ let currentScreen = 'screen-account';
 function formatPoints(pts) {
   if (typeof pts !== 'number' || isNaN(pts)) return '0';
   const rounded = Math.round(pts * 100) / 100;
-  return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(rounded * 10 % 1 === 0 ? 1 : 2);
+  if (Number.isInteger(rounded)) return rounded.toString();
+  if (Math.round(rounded * 10) === rounded * 10) {
+    return rounded.toFixed(1);
+  }
+  return rounded.toFixed(2);
+}
+
+// =============================================
+//  SECURITY & SANITIZATION UTILITIES (v28)
+// =============================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function isValidHttpUrl(url) {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+}
+
+function pushPointHistory(acc, entry) {
+  if (!acc) return;
+  if (!acc.pointHistory) acc.pointHistory = [];
+  acc.pointHistory.push(entry);
+  if (acc.pointHistory.length > 300) {
+    acc.pointHistory = acc.pointHistory.slice(-300);
+  }
+}
+
+function trimStudyLog(studyLog) {
+  if (!studyLog || typeof studyLog !== 'object') return;
+  const now = new Date();
+  const cutoffDate = new Date(now.getFullYear(), now.getMonth() - 13, 1);
+  const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+
+  Object.keys(studyLog).forEach(dateStr => {
+    if (dateStr < cutoffStr) {
+      delete studyLog[dateStr];
+    }
+  });
 }
 
 // =============================================
@@ -545,7 +591,7 @@ function getDefaultLimits() {
     todayEarned: 0,
     maxMonthly: 1000,
     maxDaily: 50,
-    carryOverUnlocked: true
+    carryOverUnlocked: false
   };
 }
 
@@ -573,46 +619,106 @@ function checkAndResetLimits(acc) {
 
   if (typeof acc.monthlyLimits.maxMonthly !== 'number') acc.monthlyLimits.maxMonthly = 1000;
   if (typeof acc.monthlyLimits.maxDaily !== 'number') acc.monthlyLimits.maxDaily = 50;
-  if (typeof acc.monthlyLimits.carryOverUnlocked !== 'boolean') acc.monthlyLimits.carryOverUnlocked = true;
+  if (typeof acc.monthlyLimits.carryOverUnlocked !== 'boolean') acc.monthlyLimits.carryOverUnlocked = false;
+}
+
+function getDefaultAccount(id) {
+  return {
+    id,
+    name: null,
+    birthYear: null,
+    points: 0,
+    lifetimeEarned: 0,
+    bookPoints: 0,
+    pointHistory: [],
+    wishlist: [],
+    monthlyLimits: getDefaultLimits(),
+    themeColor: (SLOT_THEMES[id] && SLOT_THEMES[id].color) || (SLOT_THEMES[0] ? SLOT_THEMES[0].color : '#4f46e5'),
+    avatarPhoto: null,
+    avatarEmoji: null,
+    achievements: {},
+    streak: { currentStreak: 0, maxStreak: 0, lastLoginDate: '', lastBonusClaimedDate: '' },
+    studyLog: {},
+    equippedTitle: null,
+    customPointWeights: null,
+    pendingBonus: null,
+    pendingBadgePopups: [],
+    weakQuestions: []
+  };
 }
 
 function loadAccounts() {
   const saved = localStorage.getItem(ACCOUNTS_KEY);
   let list = [
-    { id: 0, name: null, birthYear: null, points: 0, bookPoints: 0, pointHistory: [], wishlist: [], monthlyLimits: getDefaultLimits(), themeColor: SLOT_THEMES[0].color, avatarPhoto: null, avatarEmoji: null },
-    { id: 1, name: null, birthYear: null, points: 0, bookPoints: 0, pointHistory: [], wishlist: [], monthlyLimits: getDefaultLimits(), themeColor: SLOT_THEMES[1].color, avatarPhoto: null, avatarEmoji: null },
-    { id: 2, name: null, birthYear: null, points: 0, bookPoints: 0, pointHistory: [], wishlist: [], monthlyLimits: getDefaultLimits(), themeColor: SLOT_THEMES[2].color, avatarPhoto: null, avatarEmoji: null },
+    getDefaultAccount(0),
+    getDefaultAccount(1),
+    getDefaultAccount(2)
   ];
 
   if (saved) {
     try { 
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length === 3) {
-        list = parsed.map((acc, i) => {
+      if (Array.isArray(parsed)) {
+        list = [0, 1, 2].map(i => {
+          const acc = parsed[i] || {};
+          const defaultAcc = getDefaultAccount(i);
           const limits = acc.monthlyLimits ? { ...getDefaultLimits(), ...acc.monthlyLimits } : getDefaultLimits();
+          const streak = acc.streak ? { ...defaultAcc.streak, ...acc.streak } : { ...defaultAcc.streak };
+          
           return {
             id: i,
-            name: acc.name || null,
-            birthYear: acc.birthYear || null,
-            points: typeof acc.points === 'number' ? acc.points : 0,
-            bookPoints: typeof acc.bookPoints === 'number' ? acc.bookPoints : 0,
+            name: typeof acc.name === 'string' ? acc.name : null,
+            birthYear: typeof acc.birthYear === 'number' ? acc.birthYear : null,
+            points: typeof acc.points === 'number' && !isNaN(acc.points) ? acc.points : 0,
+            lifetimeEarned: typeof acc.lifetimeEarned === 'number' && !isNaN(acc.lifetimeEarned) ? acc.lifetimeEarned : (typeof acc.points === 'number' && !isNaN(acc.points) ? acc.points : 0),
+            bookPoints: typeof acc.bookPoints === 'number' && !isNaN(acc.bookPoints) ? acc.bookPoints : 0,
             pointHistory: Array.isArray(acc.pointHistory) ? acc.pointHistory : [],
             wishlist: Array.isArray(acc.wishlist) ? acc.wishlist : [],
             monthlyLimits: limits,
-            themeColor: acc.themeColor || SLOT_THEMES[i].color,
+            themeColor: acc.themeColor || defaultAcc.themeColor,
             avatarPhoto: acc.avatarPhoto || null,
             avatarEmoji: acc.avatarEmoji || null,
+            achievements: (acc.achievements && typeof acc.achievements === 'object' && !Array.isArray(acc.achievements)) ? acc.achievements : {},
+            streak: streak,
+            studyLog: (acc.studyLog && typeof acc.studyLog === 'object' && !Array.isArray(acc.studyLog)) ? acc.studyLog : {},
+            equippedTitle: acc.equippedTitle || null,
+            customPointWeights: (acc.customPointWeights && typeof acc.customPointWeights === 'object') ? acc.customPointWeights : null,
+            pendingBonus: acc.pendingBonus || null,
+            pendingBadgePopups: Array.isArray(acc.pendingBadgePopups) ? acc.pendingBadgePopups : [],
+            weakQuestions: Array.isArray(acc.weakQuestions) ? acc.weakQuestions : []
           };
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to parse accounts from localStorage:', e);
+      try {
+        const backupKey = `wakuwaku_accounts_broken_${Date.now()}`;
+        localStorage.setItem(backupKey, saved);
+        console.warn(`Corrupted account data was safely backed up to: ${backupKey}`);
+      } catch (backupErr) {
+        console.error('Failed to backup broken accounts data:', backupErr);
+      }
+      setTimeout(() => {
+        alert('⚠️ 保存データが破損していたため、安全のため初期化されました。\n保護者メニューの「バックアップから復元」をお試しください。');
+      }, 500);
+    }
   }
   list.forEach(acc => checkAndResetLimits(acc));
   return list;
 }
 
+let hasAlertedSaveError = false;
+
 function saveAccounts() {
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  try {
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch (e) {
+    console.error('Failed to save accounts to localStorage:', e);
+    if (!hasAlertedSaveError) {
+      hasAlertedSaveError = true;
+      alert('⚠️ データの保存に失敗しました。端末の空き容量が不足している可能性があります。');
+    }
+  }
 }
 
 function calcBookEquiv(points) {
@@ -652,17 +758,29 @@ function calcGrade(birthYear) {
   return m >= 4 ? y - birthYear - 6 : y - birthYear - 7;
 }
 
+function getGradeForAccount(acc) {
+  if (!acc || !acc.birthYear) return 5;
+  const g = calcGrade(acc.birthYear);
+  if (g === null || isNaN(g)) return 5;
+  if (g < 1) return 1; // 未就学児は1年生レベル
+  if (g > 6) return 6; // 卒業生は6年生レベル
+  return g;
+}
+
+function getGradeDisplayLabel(acc) {
+  if (!acc || !acc.birthYear) return '5年生';
+  const g = calcGrade(acc.birthYear);
+  if (g === null || isNaN(g)) return '5年生';
+  if (g < 1) return '🍼 未就学';
+  if (g > 6) return '🎓 卒業';
+  return `${g}年生`;
+}
+
 function gradeLabel(grade) {
-  if (grade === null || isNaN(grade)) return '';
+  if (grade === null || isNaN(grade)) return '5年生';
   if (grade < 1) return '🍼 未就学';
   if (grade > 6) return '🎓 卒業生';
   return `${grade}年生`;
-}
-
-function getGradeForAccount(acc) {
-  if (!acc || !acc.birthYear) return null;
-  const g = calcGrade(acc.birthYear);
-  return (g >= 1 && g <= 6) ? g : null;
 }
 
 function applyGradeTheme(grade) {
@@ -708,20 +826,21 @@ function renderAccountScreen() {
     if (acc.name) {
       // テーマカラー: カスタム > 学年テーマ > スロットデフォルト
       const cardBorder = acc.themeColor || (theme ? theme.primary : slotInfo.color);
-      const badgeText = grade ? theme.badge : (calcGrade(acc.birthYear) > 6 ? '🎓 卒業' : '🍼 未就学');
+      const badgeText = getGradeDisplayLabel(acc);
       const weakBadgeHtml = weakList.length > 0
         ? `<div class="card-weak-tag">🔥 にがて: ${weakList.length}問</div>`
         : `<div class="card-weak-tag zero">💮 にがてゼロ</div>`;
       const pointsBadgeHtml = `<div class="card-point-tag">🪙 ${formatPoints(acc.points || 0)} pt</div>`;
 
       // アバター内容: 写真 > 絵文字 > 名前1文字
+      const safeName = escapeHtml(acc.name);
       let avatarInnerHtml;
       if (acc.avatarPhoto) {
-        avatarInnerHtml = `<img class="avatar-photo-img" src="${acc.avatarPhoto}" alt="${acc.name}" draggable="false">`;
+        avatarInnerHtml = `<img class="avatar-photo-img" src="${acc.avatarPhoto}" alt="${safeName}" draggable="false">`;
       } else if (acc.avatarEmoji) {
-        avatarInnerHtml = `<span class="avatar-letter">${acc.avatarEmoji}</span>`;
+        avatarInnerHtml = `<span class="avatar-letter">${escapeHtml(acc.avatarEmoji)}</span>`;
       } else {
-        avatarInnerHtml = `<span class="avatar-letter">${acc.name.charAt(0)}</span>`;
+        avatarInnerHtml = `<span class="avatar-letter">${escapeHtml(acc.name.charAt(0))}</span>`;
       }
 
       card.style.setProperty('--card-accent', cardBorder);
@@ -732,7 +851,7 @@ function renderAccountScreen() {
           ${avatarInnerHtml}
         </div>
         <div class="account-info">
-          <div class="account-name">${acc.name}</div>
+          <div class="account-name">${safeName}</div>
           <div class="account-grade-badge pop-pill" style="background: ${cardBorder}18; color: ${cardBorder}; border-color: ${cardBorder}50;">
             ${badgeText}
           </div>
@@ -853,6 +972,51 @@ function showLoginBonusModal(streak, bonusPts) {
   ConfettiFx.launch(60);
 }
 
+/**
+ * 上限判定・丸め・各種ポイント蓄積（points / lifetimeEarned / limits）を行う共通関数 (v28)
+ * @param {Object} acc アカウントオブジェクト
+ * @param {number} requestedPoints 付与希望ポイント
+ * @returns {{ granted: number, limitNoticeText: string }}
+ */
+function grantPoints(acc, requestedPoints) {
+  let granted = 0;
+  let limitNoticeText = '';
+
+  if (!acc || typeof requestedPoints !== 'number' || requestedPoints <= 0) {
+    return { granted: 0, limitNoticeText: '' };
+  }
+
+  checkAndResetLimits(acc);
+  const limits = acc.monthlyLimits || getDefaultLimits();
+
+  const monthlyRemain = Math.max(0, limits.maxMonthly - (limits.monthlyEarned || 0));
+  const dailyRemain = limits.carryOverUnlocked
+    ? monthlyRemain
+    : Math.max(0, limits.maxDaily - (limits.todayEarned || 0));
+
+  const availableLimit = Math.min(monthlyRemain, dailyRemain);
+  granted = Math.round(Math.min(requestedPoints, availableLimit) * 100) / 100;
+
+  if (granted < requestedPoints) {
+    if (monthlyRemain <= 0) {
+      limitNoticeText = `🌟 今月のポイント上限（${limits.maxMonthly}pt）を達成したよ！すごい！来月1日にリセットされるよ！（練習はそのまま続けられるよ）`;
+    } else if (dailyRemain <= 0) {
+      limitNoticeText = `🌟 今日のポイント目安上限（${limits.maxDaily}pt）を達成したよ！あしたもがんばろう！（練習はそのまま続けられるよ）`;
+    } else {
+      limitNoticeText = `🌟 上限に達したため、今回は ${formatPoints(granted)}pt を獲得しました！（残りの問題も練習できるよ）`;
+    }
+  }
+
+  if (granted > 0) {
+    acc.points = Math.round(((acc.points || 0) + granted) * 100) / 100;
+    acc.lifetimeEarned = Math.round(((typeof acc.lifetimeEarned === 'number' ? acc.lifetimeEarned : (acc.points || 0)) + granted) * 100) / 100;
+    limits.monthlyEarned = Math.round(((limits.monthlyEarned || 0) + granted) * 100) / 100;
+    limits.todayEarned = Math.round(((limits.todayEarned || 0) + granted) * 100) / 100;
+  }
+
+  return { granted, limitNoticeText };
+}
+
 function claimLoginBonus() {
   const acc = accounts[currentAccountId];
   if (!acc || !acc.pendingBonus) {
@@ -863,17 +1027,19 @@ function claimLoginBonus() {
   const bonusPts = acc.pendingBonus.points;
   const streakNum = acc.pendingBonus.streak;
 
-  acc.points = Math.round(((acc.points || 0) + bonusPts) * 100) / 100;
-  if (!acc.pointHistory) acc.pointHistory = [];
-  acc.pointHistory.push({
-    type: 'earn',
-    title: `🔥 連続ログインボーナス（${streakNum}日目）`,
-    amount: bonusPts,
-    date: Date.now()
-  });
+  const { granted: roundedBonus } = grantPoints(acc, bonusPts);
 
-  // 学習ログにも記録
-  recordStudyLog(acc, '🔥 ログインボーナス', 1, bonusPts);
+  if (roundedBonus > 0) {
+    pushPointHistory(acc, {
+      type: 'earn',
+      title: `🔥 連続ログインボーナス（${streakNum}日目）`,
+      amount: roundedBonus,
+      date: Date.now()
+    });
+
+    // 学習ログにも記録
+    recordStudyLog(acc, 'login_bonus', '🔥 ログインボーナス', 1, 1, roundedBonus);
+  }
 
   acc.streak.lastBonusClaimedDate = getTodayDateString();
   delete acc.pendingBonus;
@@ -884,25 +1050,71 @@ function claimLoginBonus() {
   SoundFx.playCorrect();
 }
 
-// 日別学習ログの記録
-function recordStudyLog(acc, subjectName, questionCount, pointsEarned) {
+// 日別学習ログの記録（subjectKey, 正解数の分離記録対応 ＆ 13ヶ月トリム）
+function recordStudyLog(acc, subjectKey, subjectName, questionCount, correctCount, pointsEarned) {
   if (!acc) return;
   if (!acc.studyLog) acc.studyLog = {};
+
+  // 後方互換性：もし4引数で呼ばれた場合（subjectName, questionCount, pointsEarned）のフォールバック
+  if (pointsEarned === undefined && typeof questionCount === 'number') {
+    pointsEarned = questionCount;
+    questionCount = subjectName;
+    subjectName = subjectKey;
+    correctCount = questionCount;
+    subjectKey = 'other';
+  }
 
   const today = getTodayDateString();
   if (!acc.studyLog[today]) {
     acc.studyLog[today] = { totalPoints: 0, items: [] };
   }
 
-  acc.studyLog[today].totalPoints = Math.round(((acc.studyLog[today].totalPoints || 0) + pointsEarned) * 100) / 100;
+  acc.studyLog[today].totalPoints = Math.round(((acc.studyLog[today].totalPoints || 0) + (pointsEarned || 0)) * 100) / 100;
   acc.studyLog[today].items.push({
     time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-    subject: subjectName,
-    count: questionCount,
-    points: pointsEarned
+    subjectKey: subjectKey || 'other',
+    subject: subjectName || '',
+    count: questionCount || 0,
+    correctCount: (typeof correctCount === 'number') ? correctCount : (questionCount || 0),
+    points: pointsEarned || 0
   });
 
+  // 13ヶ月を超えた古いログをトリム
+  trimStudyLog(acc.studyLog);
+
   saveAccounts();
+}
+
+/**
+ * クイズ・特訓完了時のポイント加算・履歴記録・学習ログ記録を集約する共通関数 (v28 リファクタ)
+ */
+function applyEarnedPoints(acc, { subjectKey, subjectName, historyTitle, requestedPoints, totalQuestions = 0, correctCount = 0 }) {
+  let actualEarnedPoints = 0;
+  let limitNoticeText = '';
+
+  if (acc && requestedPoints > 0) {
+    const res = grantPoints(acc, requestedPoints);
+    actualEarnedPoints = res.granted;
+    limitNoticeText = res.limitNoticeText;
+
+    if (actualEarnedPoints > 0) {
+      pushPointHistory(acc, {
+        type: 'earn',
+        title: historyTitle,
+        amount: actualEarnedPoints,
+        date: Date.now()
+      });
+
+      if (subjectName) {
+        recordStudyLog(acc, subjectKey, subjectName, totalQuestions, correctCount, actualEarnedPoints);
+      }
+
+      saveAccounts();
+      renderAccountScreen();
+    }
+  }
+
+  return { actualEarnedPoints, limitNoticeText };
 }
 
 // 学習カレンダーモーダル
@@ -1246,17 +1458,22 @@ function checkAndUnlockAchievements(acc, eventContext = {}) {
       if (day.items) {
         day.items.forEach(item => {
           totalQuestionsAnswered += (item.count || 0);
-          if (item.subject.includes('漢字ドリル')) totalKanjiCorrect += (item.count || 0);
-          if (item.subject.includes('書き取り')) totalWritingCorrect += (item.count || 0);
-          if (item.subject.includes('算数')) totalMathCorrect += (item.count || 0);
-          if (item.subject.includes('タイピング')) totalTypingCount += (item.count || 0);
+          
+          const sKey = item.subjectKey || '';
+          const sName = item.subject || '';
+          const correct = (typeof item.correctCount === 'number') ? item.correctCount : (item.count || 0);
+
+          if (sKey === 'kanji' || sName.includes('漢字ドリル')) totalKanjiCorrect += correct;
+          if (sKey === 'writing' || sName.includes('書き取り')) totalWritingCorrect += correct;
+          if (sKey === 'math' || sName.includes('算数')) totalMathCorrect += correct;
+          if (sKey === 'typing' || sName.includes('タイピング')) totalTypingCount += (item.count || 0);
         });
       }
     });
   }
 
   const streak = (acc.streak && acc.streak.maxStreak) || 1;
-  const totalEarned = (acc.monthlyLimits && acc.monthlyLimits.monthlyEarned) || (acc.points || 0);
+  const lifetimeEarned = (typeof acc.lifetimeEarned === 'number') ? acc.lifetimeEarned : (acc.points || 0);
 
   // 条件判定
   if (totalQuestionsAnswered >= 1) unlockBadge(acc, 'first_step');
@@ -1275,13 +1492,14 @@ function checkAndUnlockAchievements(acc, eventContext = {}) {
   if (totalMathCorrect >= 1) unlockBadge(acc, 'math_first');
   if (eventContext.mathPerfect) unlockBadge(acc, 'math_perfect');
   if (totalMathCorrect >= 50) unlockBadge(acc, 'math_50');
+  if (eventContext.monsterSlayer) unlockBadge(acc, 'monster_slayer');
 
   if (totalTypingCount >= 1) unlockBadge(acc, 'typing_first');
   if (eventContext.typingRank === 'S' || eventContext.typingRank === 'SS') unlockBadge(acc, 'typing_s_rank');
   if (eventContext.typingSpeedster) unlockBadge(acc, 'typing_speedster');
 
-  if (totalEarned >= 50 || (acc.points || 0) >= 50) unlockBadge(acc, 'point_50');
-  if (totalEarned >= 100 || (acc.points || 0) >= 100) unlockBadge(acc, 'point_100');
+  if (lifetimeEarned >= 50) unlockBadge(acc, 'point_50');
+  if (lifetimeEarned >= 100) unlockBadge(acc, 'point_100');
   if (acc.wishlist && acc.wishlist.length > 0) unlockBadge(acc, 'wishlist_set');
 }
 
@@ -1296,14 +1514,16 @@ function unlockBadge(acc, badgeId) {
 
   // 解放ボーナスポイント
   if (badge.points > 0) {
-    acc.points = Math.round(((acc.points || 0) + badge.points) * 100) / 100;
-    if (!acc.pointHistory) acc.pointHistory = [];
-    acc.pointHistory.push({
-      type: 'earn',
-      title: `🏆 実績解除: ${badge.title}`,
-      amount: badge.points,
-      date: Date.now()
-    });
+    const { granted: roundedBonus } = grantPoints(acc, badge.points);
+
+    if (roundedBonus > 0) {
+      pushPointHistory(acc, {
+        type: 'earn',
+        title: `🏆 実績解除: ${badge.title}`,
+        amount: roundedBonus,
+        date: Date.now()
+      });
+    }
   }
 
   // デフォルトで未装備なら自動装着
@@ -1318,34 +1538,44 @@ function unlockBadge(acc, badgeId) {
   acc.pendingBadgePopups.push(badge);
 }
 
+let isBadgePopupShowing = false;
+
 function showPendingBadgePopups() {
+  if (isBadgePopupShowing) return;
   const acc = accounts[currentAccountId];
   if (!acc || !acc.pendingBadgePopups || acc.pendingBadgePopups.length === 0) return;
 
-  const badge = acc.pendingBadgePopups.shift();
-  saveAccounts();
-
   const modal = document.getElementById('modal-badge-unlocked');
   if (!modal) return;
+
+  isBadgePopupShowing = true;
+  const badge = acc.pendingBadgePopups.shift();
+  saveAccounts();
 
   document.getElementById('unlocked-badge-icon').textContent = badge.icon;
   document.getElementById('unlocked-badge-title').textContent = badge.title;
   document.getElementById('unlocked-badge-desc').textContent = badge.desc;
 
+  const closeAndNext = () => {
+    modal.style.display = 'none';
+    isBadgePopupShowing = false;
+    setTimeout(() => {
+      showPendingBadgePopups();
+    }, 200);
+  };
+
   const btnEquip = document.getElementById('btn-badge-equip-now');
   if (btnEquip) {
     btnEquip.onclick = () => {
       equipTitle(badge.id);
-      modal.style.display = 'none';
-      showPendingBadgePopups();
+      closeAndNext();
     };
   }
 
   const btnClose = document.getElementById('btn-badge-close');
   if (btnClose) {
     btnClose.onclick = () => {
-      modal.style.display = 'none';
-      showPendingBadgePopups();
+      closeAndNext();
     };
   }
 
@@ -1612,6 +1842,9 @@ function deleteAccount(id) {
 
 function resetWeakHistory(id) {
   if (id === null || id === undefined) return;
+  const ok = confirm('これまでの「にがて・マスター・連続正解」の記録をすべてリセットしますか？\n（この操作は取り消せません）');
+  if (!ok) return;
+
   saveHistory(id, {});
   document.getElementById('settings-weak-count').textContent = '0問';
   alert('にがて履歴をリセットしました！');
@@ -1698,18 +1931,20 @@ function renderWishlist(acc) {
     const pct = Math.min(100, Math.floor((totalBookFunds / item.price) * 100));
     const remain = Math.max(0, item.price - totalBookFunds);
 
+    const safeTitle = escapeHtml(item.title);
+    const isValidUrl = item.url && isValidHttpUrl(item.url);
     const progressLabelHtml = isReady
       ? '<span class="wishlist-label-ready">🎉 目標達成！本を買えるよ！</span>'
       : `<span class="wishlist-label-need">あと <strong>${remain}</strong> 円分 (約 ${Math.ceil(remain / (currentFxRate / 100))} pt)</span>`;
 
-    const urlBtnHtml = item.url
-      ? `<a href="${item.url}" target="_blank" rel="noopener noreferrer" class="btn-pop-link-small"><span>🛒</span> 本を見に行く ↗</a>`
+    const urlBtnHtml = isValidUrl
+      ? `<a href="${encodeURI(item.url)}" target="_blank" rel="noopener noreferrer" class="btn-pop-link-small"><span>🛒</span> 本を見に行く ↗</a>`
       : '';
 
     card.innerHTML = `
       <div class="wishlist-item-top">
         <div class="wishlist-item-title-wrap">
-          <div class="wishlist-item-title">📖 ${item.title}</div>
+          <div class="wishlist-item-title">📖 ${safeTitle}</div>
           <div class="wishlist-item-price">目標価格: ${item.price} 円</div>
         </div>
         <div class="wishlist-item-actions-top">
@@ -1770,7 +2005,7 @@ function saveWishlistItem() {
 
   const title = document.getElementById('wishlist-input-title').value.trim();
   const price = parseInt(document.getElementById('wishlist-input-price').value);
-  const url = document.getElementById('wishlist-input-url').value.trim();
+  const rawUrl = document.getElementById('wishlist-input-url').value.trim();
 
   if (!title) {
     alert('本のなまえ（タイトル）を入力してください。');
@@ -1783,12 +2018,18 @@ function saveWishlistItem() {
     return;
   }
 
+  if (rawUrl && !isValidHttpUrl(rawUrl)) {
+    alert('URLは http:// または https:// で始まる正しいアドレスを入力してください。');
+    document.getElementById('wishlist-input-url').focus();
+    return;
+  }
+
   if (!acc.wishlist) acc.wishlist = [];
   acc.wishlist.push({
     id: 'w_' + Date.now(),
     title,
     price,
-    url: url || null,
+    url: rawUrl ? rawUrl : null,
     createdAt: Date.now()
   });
 
@@ -1816,30 +2057,31 @@ function completeWishlistItem(item) {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
-  const ok = confirm(`【本を購入！】\n\n「${item.title}」を購入しましたか？\nほしい本リストから達成完了とし、履歴に記録します！`);
+  const ok = confirm(`【本を購入！】\n\n「${item.title}」を購入しましたか？\n（保護者暗証番号の入力が必要です）`);
   if (!ok) return;
 
-  // リストから削除
-  acc.wishlist = (acc.wishlist || []).filter(w => w.id !== item.id);
+  openParentPinModal(() => {
+    // リストから削除
+    acc.wishlist = (acc.wishlist || []).filter(w => w.id !== item.id);
 
-  // 本ポイントが十分にあれば精算（なければ記念記録）
-  if ((acc.bookPoints || 0) >= item.price) {
-    acc.bookPoints -= item.price;
-  }
+    // 本ポイントが十分にあれば精算（なければ記念記録）
+    if ((acc.bookPoints || 0) >= item.price) {
+      acc.bookPoints -= item.price;
+    }
 
-  if (!acc.pointHistory) acc.pointHistory = [];
-  acc.pointHistory.push({
-    type: 'settle',
-    title: `🎉 欲しい本達成: 「${item.title}」を購入！`,
-    amount: 0,
-    date: Date.now()
+    pushPointHistory(acc, {
+      type: 'settle',
+      title: `🎉 欲しい本達成: 「${item.title}」を購入！`,
+      amount: 0,
+      date: Date.now()
+    });
+
+    saveAccounts();
+    renderAccountScreen();
+    openWalletScreen(currentAccountId);
+    renderPortalScreen();
+    alert(`🎊 おめでとう！「${item.title}」の購入達成を記録しました！\nたくさん本を読んでね！`);
   });
-
-  saveAccounts();
-  renderAccountScreen();
-  openWalletScreen(currentAccountId);
-  renderPortalScreen();
-  alert(`🎊 おめでとう！「${item.title}」の購入達成を記録しました！\nたくさん本を読んでね！`);
 }
 
 function renderWalletHistory(acc) {
@@ -1869,11 +2111,12 @@ function renderWalletHistory(acc) {
 
     const d = new Date(item.date);
     const dateStr = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    const safeTitle = escapeHtml(item.title);
 
     el.innerHTML = `
       <div class="history-item-left">
         <span class="history-item-badge ${badgeClass}">${badgeText}</span>
-        <span class="history-item-title">${item.title}</span>
+        <span class="history-item-title">${safeTitle}</span>
         <small style="color:#94a3b8; font-size:0.75rem;">${dateStr}</small>
       </div>
       <div class="history-item-amount ${isPlus ? 'plus' : 'minus'}">${amountStr}</div>
@@ -1892,33 +2135,35 @@ function exchangeToBooks() {
     return;
   }
 
-  const bookVal = calcBookEquiv(currentPoints);
-  const ok = confirm(
-    `【バリューブックスポイントに交換】\n\n` +
-    `現在の為替レート: 1ドル = ${currentFxRate}円\n` +
-    `所持ポイント ${currentPoints} pt を、\n` +
-    `👉 ${bookVal} 円分 のバリューブックスポイントに交換しますか？\n` +
-    `（現金よりも ${bookVal - currentPoints} 円分おトク！）`
-  );
+  openParentPinModal(() => {
+    const bookVal = calcBookEquiv(currentPoints);
+    const ok = confirm(
+      `【バリューブックスポイントに交換（保護者確認）】\n\n` +
+      `現在の為替レート: 1ドル = ${currentFxRate}円\n` +
+      `所持ポイント ${formatPoints(currentPoints)} pt を、\n` +
+      `👉 ${bookVal} 円分 のバリューブックスポイントに交換しますか？\n` +
+      `（現金よりも ${bookVal - currentPoints} 円分おトク！）`
+    );
 
-  if (ok) {
-    acc.points = 0;
-    acc.bookPoints = (acc.bookPoints || 0) + bookVal;
-    if (!acc.pointHistory) acc.pointHistory = [];
-    acc.pointHistory.push({
-      type: 'book',
-      title: `バリューブックスポイント交換 (${bookVal}円分)`,
-      amount: -currentPoints,
-      bookAmount: bookVal,
-      date: Date.now()
-    });
+    if (ok) {
+      acc.points = 0;
+      acc.bookPoints = (acc.bookPoints || 0) + bookVal;
+      pushPointHistory(acc, {
+        type: 'book',
+        title: `バリューブックスポイント交換 (${bookVal}円分)`,
+        amount: -currentPoints,
+        bookAmount: bookVal,
+        date: Date.now()
+      });
 
-    saveAccounts();
-    renderAccountScreen();
-    openWalletScreen(currentAccountId);
-    SoundFx.playCoin();
-    alert(`🎉 やったね！ ${bookVal} 円分のバリューブックスポイントに交換しました！\n本を選んでおうちの人に買ってもらおう！`);
-  }
+      saveAccounts();
+      renderAccountScreen();
+      openWalletScreen(currentAccountId);
+      renderPortalScreen();
+      SoundFx.playCoin();
+      alert(`🎉 やったね！ ${bookVal} 円分のバリューブックスポイントに交換しました！\n本を選んでおうちの人に買ってもらおう！`);
+    }
+  });
 }
 
 function claimCash() {
@@ -1944,25 +2189,49 @@ function claimCash() {
 }
 
 // =============================================
-//  PARENT PIN MODAL & PANEL LOGIC
+//  PARENT PIN MODAL & PANEL LOGIC (v28 セキュアモーダル)
 // =============================================
 let enteredPin = '';
-let pinSuccessCallback = null;
+let pinInputHandler = null;
 
 function openParentPinModal(callback) {
+  openCustomPinModal({
+    title: '保護者暗証番号',
+    desc: '4桁の番号を入力してください（初期値: 0000）',
+    onComplete: (input) => {
+      const savedPin = getParentPin();
+      if (input === savedPin) {
+        closeParentPinModal();
+        if (callback) callback();
+        return true;
+      }
+      return false; // 不一致
+    }
+  });
+}
+
+function openCustomPinModal({ title, desc, onComplete }) {
   enteredPin = '';
-  pinSuccessCallback = callback;
-  updatePinDotsDisplay();
+  pinInputHandler = onComplete;
+
+  const modal = document.getElementById('modal-parent-pin');
+  if (!modal) return;
+
+  const titleEl = modal.querySelector('.pin-modal-title');
+  if (titleEl) titleEl.textContent = title || '保護者暗証番号';
+  const descEl = modal.querySelector('.pin-modal-desc');
+  if (descEl) descEl.textContent = desc || '4桁の番号を入力してください';
+
   const errorEl = document.getElementById('pin-error-msg');
   if (errorEl) errorEl.style.display = 'none';
 
-  const modal = document.getElementById('modal-parent-pin');
-  if (modal) modal.style.display = 'flex';
+  updatePinDotsDisplay();
+  modal.style.display = 'flex';
 }
 
 function closeParentPinModal() {
   enteredPin = '';
-  pinSuccessCallback = null;
+  pinInputHandler = null;
   const modal = document.getElementById('modal-parent-pin');
   if (modal) modal.style.display = 'none';
 }
@@ -1984,18 +2253,19 @@ function handlePinKey(key) {
   updatePinDotsDisplay();
 
   if (enteredPin.length === 4) {
-    const savedPin = getParentPin();
-    if (enteredPin === savedPin) {
-      const cb = pinSuccessCallback;
-      closeParentPinModal();
-      if (cb) cb();
-    } else {
-      const errorEl = document.getElementById('pin-error-msg');
-      if (errorEl) errorEl.style.display = 'block';
-      setTimeout(() => {
-        enteredPin = '';
-        updatePinDotsDisplay();
-      }, 700);
+    if (pinInputHandler) {
+      const isSuccess = pinInputHandler(enteredPin);
+      if (!isSuccess) {
+        const errorEl = document.getElementById('pin-error-msg');
+        if (errorEl) {
+          errorEl.textContent = '暗証番号が正しくありません';
+          errorEl.style.display = 'block';
+        }
+        setTimeout(() => {
+          enteredPin = '';
+          updatePinDotsDisplay();
+        }, 700);
+      }
     }
   }
 }
@@ -2052,6 +2322,12 @@ function renderParentPanel() {
   if (elMath) elMath.value = weights.math !== undefined ? weights.math : defMath;
   const elTyping = document.getElementById('cfg-weight-typing');
   if (elTyping) elTyping.value = weights.typing !== undefined ? weights.typing : defTyping;
+
+  // AI採点設定の反映
+  const elAi = document.getElementById('cfg-ai-grading');
+  if (elAi) {
+    elAi.checked = localStorage.getItem('setting_ai_grading_enabled') !== 'false';
+  }
 }
 
 function savePointWeights() {
@@ -2100,6 +2376,7 @@ function savePointConfig() {
   const maxMonthly = parseInt(document.getElementById('cfg-max-monthly').value);
   const maxDaily = parseInt(document.getElementById('cfg-max-daily').value);
   const carryover = document.getElementById('cfg-carryover').checked;
+  const elAi = document.getElementById('cfg-ai-grading');
 
   if (isNaN(maxMonthly) || maxMonthly <= 0) {
     alert('正しい月間上限を入力してください。');
@@ -2113,37 +2390,66 @@ function savePointConfig() {
   acc.monthlyLimits.maxMonthly = maxMonthly;
   acc.monthlyLimits.maxDaily = maxDaily;
   acc.monthlyLimits.carryOverUnlocked = carryover;
+  if (elAi) {
+    localStorage.setItem('setting_ai_grading_enabled', String(elAi.checked));
+  }
 
   saveAccounts();
   renderParentPanel();
-  alert('⚙️ ポイント上限の設定を保存しました！');
+  alert('⚙️ 設定を保存しました！');
 }
 
 function changeParentPin() {
-  const currentPin = getParentPin();
-  const inputOld = prompt('【暗証番号の変更】\n現在の4桁の暗証番号を入力してください:');
-  if (inputOld === null) return;
-  if (inputOld !== currentPin) {
-    alert('現在の暗証番号が正しくありません。');
-    return;
-  }
+  // ステップ1: 現在のPIN入力
+  openCustomPinModal({
+    title: '暗証番号の変更（1/3）',
+    desc: '【現在の】4桁の暗証番号を入力してください',
+    onComplete: (oldInput) => {
+      const currentPin = getParentPin();
+      if (oldInput !== currentPin) {
+        return false;
+      }
 
-  const newPin1 = prompt('新しく設定する【4桁の数字】を入力してください:');
-  if (newPin1 === null) return;
-  if (!/^\d{4}$/.test(newPin1)) {
-    alert('暗証番号は半角数字4桁で入力してください。');
-    return;
-  }
+      // ステップ2: 新しいPIN入力
+      setTimeout(() => {
+        openCustomPinModal({
+          title: '暗証番号の変更（2/3）',
+          desc: '【新しく設定する】4桁の数字を入力してください',
+          onComplete: (newPin1) => {
+            // ステップ3: 新しいPINの確認入力
+            setTimeout(() => {
+              openCustomPinModal({
+                title: '暗証番号の変更（3/3）',
+                desc: '【確認のためもう一度】新しい4桁を入力してください',
+                onComplete: (newPin2) => {
+                  if (newPin1 !== newPin2) {
+                    const errorEl = document.getElementById('pin-error-msg');
+                    if (errorEl) {
+                      errorEl.textContent = '暗証番号が一致しませんでした';
+                      errorEl.style.display = 'block';
+                    }
+                    setTimeout(() => {
+                      closeParentPinModal();
+                      alert('暗証番号が一致しませんでした。もう一度やり直してください。');
+                    }, 800);
+                    return false;
+                  }
 
-  const newPin2 = prompt('確認のため、もう一度新しい【4桁の数字】を入力してください:');
-  if (newPin2 === null) return;
-  if (newPin1 !== newPin2) {
-    alert('暗証番号が一致しませんでした。もう一度やり直してください。');
-    return;
-  }
-
-  setParentPin(newPin1);
-  alert('🔑 保護者暗証番号を新しく変更しました！\n忘れないようご注意ください。');
+                  setParentPin(newPin1);
+                  closeParentPinModal();
+                  SoundFx.playFanfare();
+                  alert('🔑 保護者暗証番号を新しく変更しました！\n忘れないようご注意ください。');
+                  return true;
+                }
+              });
+            }, 300);
+            return true;
+          }
+        });
+      }, 300);
+      return true;
+    }
+  });
 }
 
 function parentSettleCash() {
@@ -2166,8 +2472,7 @@ function parentSettleCash() {
   }
 
   acc.points -= amount;
-  if (!acc.pointHistory) acc.pointHistory = [];
-  acc.pointHistory.push({
+  pushPointHistory(acc, {
     type: 'cash',
     title: `お小遣い精算（${amount}円支払い済み）`,
     amount: -amount,
@@ -2200,8 +2505,7 @@ function parentSettleBook() {
   }
 
   acc.bookPoints -= amount;
-  if (!acc.pointHistory) acc.pointHistory = [];
-  acc.pointHistory.push({
+  pushPointHistory(acc, {
     type: 'settle',
     title: `バリューブックス本購入（${amount}円分使用）`,
     amount: 0,
@@ -2231,8 +2535,7 @@ function parentAddPoints() {
   const reason = prompt('理由・名目を入力してください（例: お手伝いごほうび、漢字テスト満点など）:', 'お手伝いごほうび') || 'ごほうびポイント';
 
   acc.points = (acc.points || 0) + amount;
-  if (!acc.pointHistory) acc.pointHistory = [];
-  acc.pointHistory.push({
+  pushPointHistory(acc, {
     type: 'earn',
     title: `🎁 ${reason}`,
     amount: amount,
@@ -2540,14 +2843,21 @@ function skipQuizQuestion() {
   const acc = accounts[currentAccountId];
   const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
   const pool = (typeof GRADE_DATA !== 'undefined' && GRADE_DATA[grade]) ? GRADE_DATA[grade] : [];
-  const unused = pool.filter(item => !quizQuestions.some(q => q.q === item.q));
+  const unused = pool.filter(item => !quizQuestions.some(q => q.question === item.q));
   if (unused.length > 0) {
     const raw = shuffle(unused)[0];
+    const distractors = getDistractors(raw.a, 3);
+    const choices = shuffle([raw.a, ...distractors]);
+    const history = loadHistory(currentAccountId);
+    const rec = history[raw.q];
+    const isWeakRevenge = rec && rec.isWeak === true;
+
     const newQ = {
-      ...raw,
-      grade,
-      choices: shuffle([...raw.choices]),
-      isWeakRevenge: false
+      question: raw.q,
+      correct: raw.a,
+      choices,
+      hint: raw.h,
+      isWeakRevenge
     };
     quizQuestions.splice(currentIndex, 1, newQ);
   }
@@ -2681,8 +2991,8 @@ function handleChoice(btn, choice, q) {
     btn.classList.add('correct');
     btn.innerHTML = `<span class="choice-icon">💮</span> <span class="choice-text serif-text">${choice}</span>`;
     score++;
-    sessionEarnedPoints += ptInfo.total;
-    document.getElementById('quiz-session-points').textContent = sessionEarnedPoints;
+    sessionEarnedPoints = Math.round((sessionEarnedPoints + ptInfo.total) * 100) / 100;
+    document.getElementById('quiz-session-points').textContent = formatPoints(sessionEarnedPoints);
 
     record.correctCount = (record.correctCount || 0) + 1;
     record.streak = (record.streak || 0) + 1;
@@ -2781,49 +3091,14 @@ function showResult() {
 
   // ポイント付与 & 保存（月間・日別上限判定）
   const acc = accounts[currentAccountId];
-  let actualEarnedPoints = 0;
-  let limitNoticeText = '';
-
-  if (acc && sessionEarnedPoints > 0) {
-    checkAndResetLimits(acc);
-    const limits = acc.monthlyLimits || getDefaultLimits();
-
-    const monthlyRemain = Math.max(0, limits.maxMonthly - (limits.monthlyEarned || 0));
-    // 月末残枠解放モードがONなら、月間残枠まで獲得可能。OFFなら1日残枠まで。
-    const dailyRemain = limits.carryOverUnlocked
-      ? monthlyRemain
-      : Math.max(0, limits.maxDaily - (limits.todayEarned || 0));
-
-    const availableLimit = Math.min(monthlyRemain, dailyRemain);
-    actualEarnedPoints = Math.min(sessionEarnedPoints, availableLimit);
-
-    if (actualEarnedPoints < sessionEarnedPoints) {
-      if (monthlyRemain <= 0) {
-        limitNoticeText = `🌟 今月のポイント上限（${limits.maxMonthly}pt）を達成したよ！すごい！来月1日にリセットされるよ！（練習クイズはそのまま続けられるよ）`;
-      } else if (dailyRemain <= 0) {
-        limitNoticeText = `🌟 今日のポイント目安上限（${limits.maxDaily}pt）を達成したよ！あしたもがんばろう！（練習クイズはそのまま続けられるよ）`;
-      } else {
-        limitNoticeText = `🌟 上限まであと ${actualEarnedPoints}pt 獲得しました！（残りの問題も練習できるよ）`;
-      }
-    }
-
-    if (actualEarnedPoints > 0) {
-      acc.points = (acc.points || 0) + actualEarnedPoints;
-      limits.monthlyEarned = (limits.monthlyEarned || 0) + actualEarnedPoints;
-      limits.todayEarned = (limits.todayEarned || 0) + actualEarnedPoints;
-
-      if (!acc.pointHistory) acc.pointHistory = [];
-      acc.pointHistory.push({
-        type: 'earn',
-        title: `クイズ${score}問正解 (${total}問中)`,
-        amount: actualEarnedPoints,
-        date: Date.now()
-      });
-      recordStudyLog(acc, '📚 漢字ドリル', total, actualEarnedPoints);
-      saveAccounts();
-      renderAccountScreen();
-    }
-  }
+  const { actualEarnedPoints, limitNoticeText } = applyEarnedPoints(acc, {
+    subjectKey: 'kanji',
+    subjectName: '📚 漢字ドリル',
+    historyTitle: `クイズ${score}問正解 (${total}問中)`,
+    requestedPoints: sessionEarnedPoints,
+    totalQuestions: total,
+    correctCount: score
+  });
 
   const noticeEl = document.getElementById('result-limit-notice');
   if (noticeEl) {
@@ -2838,9 +3113,9 @@ function showResult() {
   const currentTotalPoints = acc ? (acc.points || 0) : 0;
   const bookEquiv = calcBookEquiv(currentTotalPoints);
 
-  document.getElementById('result-earned-points').textContent = actualEarnedPoints;
-  document.getElementById('result-total-points').textContent = currentTotalPoints;
-  document.getElementById('result-cash-equiv').textContent = currentTotalPoints;
+  document.getElementById('result-earned-points').textContent = formatPoints(actualEarnedPoints);
+  document.getElementById('result-total-points').textContent = formatPoints(currentTotalPoints);
+  document.getElementById('result-cash-equiv').textContent = formatPoints(currentTotalPoints);
   document.getElementById('result-book-equiv').textContent = bookEquiv;
 
   let emoji, title;
@@ -2940,6 +3215,15 @@ function showResult() {
 // =============================================
 //  MATH QUEST (算数クエスト) LOGIC
 // =============================================
+const MATH_MONSTERS = {
+  1: { name: 'ぷるぷるスライム', icon: '🟢', hp: 10, timePerQ: 10 },
+  2: { name: 'いたずらゴブリン', icon: '👺', hp: 10, timePerQ: 9 },
+  3: { name: 'ガイコツ剣士', icon: '💀', hp: 10, timePerQ: 8.5 },
+  4: { name: '魔導士ゴーレム', icon: '🗿', hp: 10, timePerQ: 8 },
+  5: { name: '暗黒ナイト', icon: '🛡️', hp: 10, timePerQ: 7.5 },
+  6: { name: '紅蓮のドラゴン', icon: '🐉', hp: 10, timePerQ: 7 }
+};
+
 let mathQuestions = [];
 let mathCurrentIndex = 0;
 let mathScore = 0;
@@ -2948,6 +3232,17 @@ let mathSessionEarnedPoints = 0;
 let mathInputVal = '';
 let mathWrongAnswers = [];
 let mathAnswered = false;
+
+let mathBattleMode = 'normal'; // 'normal' or 'monster'
+let mathComboCount = 0;
+let mathMaxCombo = 0;
+let mathMonsterCurrentHp = 10;
+let mathMonsterMaxHp = 10;
+let mathTimerInterval = null;
+let mathTimeRemaining = 10;
+let mathTimeLimitPerQ = 10;
+let mathBattleStartTime = 0;
+let mathBattleTotalTimeSec = 0;
 
 const MATH_GRADE_INFO = {
   1: { title: "1年生の計算メニュー", desc: "10までの足し算・引き算や、くり上がり・くり下がりの計算を練習しよう！" },
@@ -2973,13 +3268,29 @@ function openMathStart() {
   document.getElementById('math-grade-desc').textContent = info.desc;
   document.getElementById('math-start-points-display').textContent = formatPoints(acc.points || 0);
 
-  // Reset count buttons
+  // Reset count buttons & mode
+  setMathBattleMode('normal');
   document.querySelectorAll('.math-mode-btn').forEach(b => b.classList.remove('active'));
   const btn10 = document.getElementById('math-mode-10');
   if (btn10) btn10.classList.add('active');
   mathSelectedCount = 10;
 
   showScreen('screen-math-start');
+}
+
+function setMathBattleMode(mode) {
+  mathBattleMode = mode;
+  SoundFx.playTap();
+  const btnNorm = document.getElementById('btn-math-mode-normal');
+  const btnMon = document.getElementById('btn-math-mode-monster');
+  const countWrap = document.getElementById('math-count-selector-wrap');
+
+  if (btnNorm) btnNorm.classList.toggle('active', mode === 'normal');
+  if (btnMon) btnMon.classList.toggle('active', mode === 'monster');
+  if (countWrap) countWrap.style.display = mode === 'normal' ? 'block' : 'none';
+  if (mode === 'monster') {
+    mathSelectedCount = 10;
+  }
 }
 
 function startMathQuiz() {
@@ -3093,8 +3404,8 @@ function submitMathAnswer() {
   if (isCorrect) {
     SoundFx.playCorrect();
     mathScore++;
-    mathSessionEarnedPoints += q.points;
-    document.getElementById('math-session-points').textContent = mathSessionEarnedPoints;
+    mathSessionEarnedPoints = Math.round((mathSessionEarnedPoints + (q.points || 1)) * 100) / 100;
+    document.getElementById('math-session-points').textContent = formatPoints(mathSessionEarnedPoints);
 
     fb.innerHTML = `
       <span class="fb-symbol fb-correct pop-bounce">
@@ -3141,8 +3452,12 @@ function skipMathQuestion() {
   SoundFx.playTap();
   const acc = accounts[currentAccountId];
   const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
-  const newQ = generateMathQuestion(grade, mathSelectedMode);
-  mathQuestions.splice(mathCurrentIndex, 1, newQ);
+  if (typeof generateMathQuiz === 'function') {
+    const newProblems = generateMathQuiz(grade, 1, 'normal');
+    if (newProblems && newProblems.length > 0) {
+      mathQuestions.splice(mathCurrentIndex, 1, newProblems[0]);
+    }
+  }
   renderMathQuestion();
 }
 
@@ -3154,49 +3469,16 @@ function showMathResult() {
   document.getElementById('math-result-total').textContent = total;
   document.getElementById('math-result-percent').textContent = pct;
 
+  // ポイント付与 & 保存（月間・日別上限判定）
   const acc = accounts[currentAccountId];
-  let actualEarnedPoints = 0;
-  let limitNoticeText = '';
-
-  if (acc && mathSessionEarnedPoints > 0) {
-    checkAndResetLimits(acc);
-    const limits = acc.monthlyLimits || getDefaultLimits();
-
-    const monthlyRemain = Math.max(0, limits.maxMonthly - (limits.monthlyEarned || 0));
-    const dailyRemain = limits.carryOverUnlocked
-      ? monthlyRemain
-      : Math.max(0, limits.maxDaily - (limits.todayEarned || 0));
-
-    const availableLimit = Math.min(monthlyRemain, dailyRemain);
-    actualEarnedPoints = Math.min(mathSessionEarnedPoints, availableLimit);
-
-    if (actualEarnedPoints < mathSessionEarnedPoints) {
-      if (monthlyRemain <= 0) {
-        limitNoticeText = `🌟 今月のポイント上限（${limits.maxMonthly}pt）を達成したよ！すごい！来月1日にリセットされるよ！（練習はそのまま続けられるよ）`;
-      } else if (dailyRemain <= 0) {
-        limitNoticeText = `🌟 今日のポイント目安上限（${limits.maxDaily}pt）を達成したよ！あしたもがんばろう！（練習はそのまま続けられるよ）`;
-      } else {
-        limitNoticeText = `🌟 上限まであと ${actualEarnedPoints}pt 獲得しました！（残りの問題も練習できるよ）`;
-      }
-    }
-
-    if (actualEarnedPoints > 0) {
-      acc.points = (acc.points || 0) + actualEarnedPoints;
-      limits.monthlyEarned = (limits.monthlyEarned || 0) + actualEarnedPoints;
-      limits.todayEarned = (limits.todayEarned || 0) + actualEarnedPoints;
-
-      if (!acc.pointHistory) acc.pointHistory = [];
-      acc.pointHistory.push({
-        type: 'earn',
-        title: `算数クエスト${mathScore}問正解 (${total}問中)`,
-        amount: actualEarnedPoints,
-        date: Date.now()
-      });
-      recordStudyLog(acc, '🔢 算数クエスト', total, actualEarnedPoints);
-      saveAccounts();
-      renderAccountScreen();
-    }
-  }
+  const { actualEarnedPoints, limitNoticeText } = applyEarnedPoints(acc, {
+    subjectKey: 'math',
+    subjectName: '🔢 算数クエスト',
+    historyTitle: `算数クエスト${mathScore}問正解 (${total}問中)`,
+    requestedPoints: mathSessionEarnedPoints,
+    totalQuestions: total,
+    correctCount: mathScore
+  });
 
   const noticeEl = document.getElementById('math-result-limit-notice');
   if (noticeEl) {
@@ -3211,9 +3493,9 @@ function showMathResult() {
   const currentTotalPoints = acc ? (acc.points || 0) : 0;
   const bookEquiv = calcBookEquiv(currentTotalPoints);
 
-  document.getElementById('math-result-earned-points').textContent = actualEarnedPoints;
-  document.getElementById('math-result-total-points').textContent = currentTotalPoints;
-  document.getElementById('math-result-cash-equiv').textContent = currentTotalPoints;
+  document.getElementById('math-result-earned-points').textContent = formatPoints(actualEarnedPoints);
+  document.getElementById('math-result-total-points').textContent = formatPoints(currentTotalPoints);
+  document.getElementById('math-result-cash-equiv').textContent = formatPoints(currentTotalPoints);
   document.getElementById('math-result-book-equiv').textContent = bookEquiv;
 
   let emoji, title;
@@ -3332,8 +3614,8 @@ let typingInsaneTotalScore = 0;   // 激激ムズムズ クリア問題数カウ
 function calcQuestionTime(kana, course) {
   const timePerChar = TYPING_TIME_PER_CHAR[course] || 0;
   if (timePerChar === 0) return 0;
-  // かな文字数（記号・スペースを除く実質文字数）でカウント
-  const charCount = [...kana].filter(c => c !== '…' && c !== ' ').length;
+  // かな文字数（スペースのみ除外し、'…'等の打鍵が必要な記号も時間に反映）
+  const charCount = [...kana].filter(c => c !== ' ').length;
   return Math.max(5, Math.round(charCount * timePerChar * 10) / 10);
 }
 
@@ -3445,7 +3727,7 @@ function openTypingStart() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
-  const grade = getGradeForAccount(acc) || calcGrade(acc.birthYear) || 5;
+  const grade = getGradeForAccount(acc);
   const isAdvancedGrade = grade >= 3;
 
   document.getElementById('typing-start-account-name').textContent = `${acc.name}さん、`;
@@ -3623,7 +3905,7 @@ function updateTypingDisplay() {
   if (typingNodeIndex >= typingPatternNodes.length) return;
 
   const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
-  const grade = acc ? (getGradeForAccount(acc) || calcGrade(acc.birthYear) || 5) : 5;
+  const grade = getGradeForAccount(acc);
   const isAdvancedGrade = grade >= 3;
 
   const node = typingPatternNodes[typingNodeIndex];
@@ -3858,9 +4140,9 @@ function handleQuestionComplete() {
 }
 
 function skipTypingQuestion() {
+  if (isTypingInputBlocked) return;
   SoundFx.playTap();
   stopQuestionTimer();
-  isTypingInputBlocked = false;
 
   const world = TYPING_WORLDS[typingSelectedWorld];
   const pool = (world.courses && world.courses[typingSelectedCourse]) || world.courses.easy;
@@ -3902,50 +4184,15 @@ function finishTypingQuiz() {
 
   // ポイント通帳への加算処理（上限チェック）
   const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
-  let actualEarnedPoints = 0;
-  let limitNoticeText = '';
-
-  if (acc) {
-    checkAndResetLimits(acc);
-    const limits = acc.monthlyLimits || getDefaultLimits();
-    const monthlyRemain = Math.max(0, limits.maxMonthly - (limits.monthlyEarned || 0));
-    const dailyRemain = limits.carryOverUnlocked
-      ? monthlyRemain
-      : Math.max(0, limits.maxDaily - (limits.todayEarned || 0));
-
-    const availableLimit = Math.min(monthlyRemain, dailyRemain);
-    actualEarnedPoints = Math.min(basePoints, availableLimit);
-    actualEarnedPoints = Math.round(actualEarnedPoints * 100) / 100;
-
-    if (actualEarnedPoints < basePoints) {
-      if (monthlyRemain <= 0) {
-        limitNoticeText = `🌟 今月のポイント上限（${limits.maxMonthly}pt）を達成したよ！すごい！来月1日にリセットされるよ！（練習はそのまま続けられるよ）`;
-      } else if (dailyRemain <= 0) {
-        limitNoticeText = `🌟 今日のポイント目安上限（${limits.maxDaily}pt）を達成したよ！あしたもがんばろう！（練習はそのまま続けられるよ）`;
-      } else {
-        limitNoticeText = `🌟 上限まであと ${formatPoints(actualEarnedPoints)}pt 獲得しました！（残りの問題も練習できるよ）`;
-      }
-    }
-
-    if (actualEarnedPoints > 0) {
-      acc.points = Math.round(((acc.points || 0) + actualEarnedPoints) * 100) / 100;
-      limits.monthlyEarned = Math.round(((limits.monthlyEarned || 0) + actualEarnedPoints) * 100) / 100;
-      limits.todayEarned = Math.round(((limits.todayEarned || 0) + actualEarnedPoints) * 100) / 100;
-
-      if (!acc.pointHistory) acc.pointHistory = [];
-      const courseName = TYPING_COURSE_NAMES[typingSelectedCourse] || '激ムズ';
-      acc.pointHistory.push({
-        type: 'earn',
-        title: `⌨️ タイピング特訓 (${TYPING_WORLDS[typingSelectedWorld].name} / ${courseName} ランク${rank})`,
-        amount: actualEarnedPoints,
-        date: Date.now()
-      });
-      recordStudyLog(acc, `⌨️ タイピング (${TYPING_WORLDS[typingSelectedWorld].name})`, typingQuizList.length, actualEarnedPoints);
-
-      saveAccounts();
-      renderAccountScreen();
-    }
-  }
+  const courseName = TYPING_COURSE_NAMES[typingSelectedCourse] || '激ムズ';
+  const { actualEarnedPoints, limitNoticeText } = applyEarnedPoints(acc, {
+    subjectKey: 'typing',
+    subjectName: `⌨️ タイピング (${TYPING_WORLDS[typingSelectedWorld].name})`,
+    historyTitle: `⌨️ タイピング特訓 (${TYPING_WORLDS[typingSelectedWorld].name} / ${courseName} ランク${rank})`,
+    requestedPoints: basePoints,
+    totalQuestions: typingQuizList.length,
+    correctCount: typingQuizList.length
+  });
 
   // 結果画面UIの反映
   const world = TYPING_WORLDS[typingSelectedWorld];
@@ -3991,22 +4238,31 @@ function finishTypingQuiz() {
 
 // データバックアップ（JSONエクスポート）
 function exportDataBackup() {
-  const data = {
-    version: 10,
-    exportedAt: new Date().toISOString(),
-    accounts: accounts,
-    parentPin: loadParentPin(),
-  };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `wakuwaku_learning_backup_${dateStr}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    const data = {
+      version: 26,
+      exportedAt: new Date().toISOString(),
+      accounts: accounts,
+      parentPin: getParentPin(),
+      histories: {
+        0: loadHistory(0),
+        1: loadHistory(1),
+        2: loadHistory(2)
+      }
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `wakuwaku_learning_backup_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('バックアップの作成中にエラーが発生しました: ' + err.message);
+  }
 }
 
 // データ復元（JSONインポート）
@@ -4028,10 +4284,77 @@ function importDataBackup(event) {
         return;
       }
 
-      accounts = data.accounts;
-      saveAccounts();
-      if (data.parentPin && data.parentPin.length === 4) {
-        saveParentPin(data.parentPin);
+      // アカウントデータの厳格な型検証とサニタイズ
+      const sanitizedAccounts = [0, 1, 2].map(i => {
+        const raw = data.accounts[i] || {};
+        const defaultAcc = getDefaultAccount(i);
+        
+        // ウィッシュリストの検証・サニタイズ（無効URLや不正型を排除）
+        const cleanWishlist = Array.isArray(raw.wishlist)
+          ? raw.wishlist.filter(w => w && typeof w.title === 'string' && w.title.trim().length > 0 && typeof w.price === 'number' && w.price > 0)
+              .map(w => ({
+                id: (typeof w.id === 'string' && w.id) ? w.id : ('w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+                title: w.title.trim(),
+                price: Math.max(1, Math.floor(w.price)),
+                url: (typeof w.url === 'string' && isValidHttpUrl(w.url)) ? w.url.trim() : null,
+                createdAt: (typeof w.createdAt === 'number') ? w.createdAt : Date.now()
+              }))
+          : [];
+
+        // ポイント履歴の検証・サニタイズ
+        const cleanHistory = Array.isArray(raw.pointHistory)
+          ? raw.pointHistory.filter(h => h && typeof h.title === 'string')
+              .map(h => ({
+                type: typeof h.type === 'string' ? h.type : 'earn',
+                title: h.title,
+                amount: (typeof h.amount === 'number' && !isNaN(h.amount)) ? h.amount : 0,
+                date: (typeof h.date === 'number') ? h.date : Date.now()
+              }))
+          : [];
+
+        const points = (typeof raw.points === 'number' && !isNaN(raw.points)) ? Math.max(0, raw.points) : 0;
+        const lifetime = (typeof raw.lifetimeEarned === 'number' && !isNaN(raw.lifetimeEarned)) ? Math.max(points, raw.lifetimeEarned) : points;
+        const limits = raw.monthlyLimits ? { ...getDefaultLimits(), ...raw.monthlyLimits } : getDefaultLimits();
+
+        return {
+          id: i,
+          name: (typeof raw.name === 'string' && raw.name.trim()) ? raw.name.trim() : null,
+          birthYear: (typeof raw.birthYear === 'number' && raw.birthYear >= 2000 && raw.birthYear <= 2040) ? raw.birthYear : null,
+          points: points,
+          lifetimeEarned: lifetime,
+          bookPoints: (typeof raw.bookPoints === 'number' && !isNaN(raw.bookPoints)) ? Math.max(0, raw.bookPoints) : 0,
+          pointHistory: cleanHistory.slice(-300),
+          wishlist: cleanWishlist,
+          monthlyLimits: limits,
+          themeColor: typeof raw.themeColor === 'string' ? raw.themeColor : defaultAcc.themeColor,
+          avatarPhoto: (typeof raw.avatarPhoto === 'string' && (raw.avatarPhoto.startsWith('data:image/') || isValidHttpUrl(raw.avatarPhoto))) ? raw.avatarPhoto : null,
+          avatarEmoji: typeof raw.avatarEmoji === 'string' ? raw.avatarEmoji : null,
+          achievements: (raw.achievements && typeof raw.achievements === 'object' && !Array.isArray(raw.achievements)) ? raw.achievements : {},
+          streak: raw.streak ? { ...defaultAcc.streak, ...raw.streak } : { ...defaultAcc.streak },
+          studyLog: (raw.studyLog && typeof raw.studyLog === 'object' && !Array.isArray(raw.studyLog)) ? raw.studyLog : {},
+          equippedTitle: typeof raw.equippedTitle === 'string' ? raw.equippedTitle : null,
+          customPointWeights: (raw.customPointWeights && typeof raw.customPointWeights === 'object') ? raw.customPointWeights : null,
+          pendingBonus: null,
+          pendingBadgePopups: [],
+          weakQuestions: Array.isArray(raw.weakQuestions) ? raw.weakQuestions : []
+        };
+      });
+
+      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(sanitizedAccounts));
+      accounts = loadAccounts();
+
+      // PIN番号の復元
+      if (typeof data.parentPin === 'string' && data.parentPin.length === 4) {
+        setParentPin(data.parentPin);
+      }
+
+      // 学習履歴の復元
+      if (data.histories && typeof data.histories === 'object') {
+        [0, 1, 2].forEach(id => {
+          if (data.histories[id]) {
+            saveHistory(id, data.histories[id]);
+          }
+        });
       }
 
       alert('バックアップデータを正常に復元しました！');
@@ -4047,10 +4370,24 @@ function importDataBackup(event) {
   reader.readAsText(file);
 }
 
+// モーダル表示判定ヘルパー（タイピング等のキー入力横取り防止）
+function isAnyModalOpen() {
+  const modals = document.querySelectorAll('.modal-overlay, .pin-modal-overlay, .badge-popup-overlay');
+  for (const m of modals) {
+    if (m.style.display && m.style.display !== 'none') {
+      return true;
+    }
+  }
+  return false;
+}
+
 // 物理キーボード対応（タイピング画面）
 window.addEventListener('keydown', (e) => {
   const typingQuizScreen = document.getElementById('screen-typing-quiz');
   if (!typingQuizScreen || !typingQuizScreen.classList.contains('active')) return;
+
+  // モーダル表示中は入力を横取りしない
+  if (isAnyModalOpen()) return;
 
   // 特殊キーの無視（Shift, Ctrl, Alt, etc）
   if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta' || e.key === 'Tab') {
@@ -4104,61 +4441,140 @@ let writingCorrectCount = 0;
 let writingEarnedPoints = 0;
 let writingSelectedCount = 5;
 
-// 手書きキャンバス管理オブジェクト（1マス/2マス縦並び両対応）
+// 手書きキャンバス管理オブジェクト（1マス/2マス縦並び両対応・ストロークベース再描画・回転対応）
 const WritingCanvas = (() => {
   let cells = [
-    { id: 1, canvas: null, ctx: null, undoStack: [], strokes: [], currentStroke: null },
-    { id: 2, canvas: null, ctx: null, undoStack: [], strokes: [], currentStroke: null }
+    { id: 1, canvas: null, ctx: null, strokes: [], currentStroke: null },
+    { id: 2, canvas: null, ctx: null, strokes: [], currentStroke: null }
   ];
+  let undoActionStack = [];
   let isDrawing = false;
   let activeCellIdx = 0;
   let currentTool = 'pencil'; // 'pencil' | 'redpen' | 'eraser'
   let strokeStartTime = 0;
-  const MAX_UNDO = 20;
+  let activePointerId = null;
 
   function init() {
     cells.forEach((cell, idx) => {
       cell.canvas = document.getElementById(`writing-canvas-${cell.id}`);
       if (!cell.canvas) return;
-      cell.ctx = cell.canvas.getContext('2d', { willReadFrequently: true });
+      cell.ctx = cell.canvas.getContext('2d');
 
-      const dpr = window.devicePixelRatio || 1;
-      const rect = cell.canvas.getBoundingClientRect();
-      const size = rect.width > 0 ? rect.width : (idx === 0 ? 300 : 230);
-      cell.canvas.width = size * dpr;
-      cell.canvas.height = size * dpr;
-      cell.ctx.scale(dpr, dpr);
+      updateCanvasResolution(idx);
 
-      // ポインターイベント登録
+      // ポインターイベント登録（setPointerCapture でマスはみ出し対応）
       cell.canvas.onpointerdown = (e) => handlePointerDown(e, idx);
       cell.canvas.onpointermove = (e) => handlePointerMove(e, idx);
       cell.canvas.onpointerup = (e) => handlePointerUp(e, idx);
       cell.canvas.onpointercancel = (e) => handlePointerUp(e, idx);
-      cell.canvas.onpointerleave = (e) => handlePointerUp(e, idx);
+    });
+
+    // 画面回転・リサイズ監視
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', handleResize);
+    }
+  }
+
+  function handleResize() {
+    cells.forEach((cell, idx) => {
+      if (cell.canvas && cell.ctx) {
+        updateCanvasResolution(idx);
+        redrawCell(idx);
+      }
     });
   }
 
-  function saveState(cellIdx) {
+  function updateCanvasResolution(cellIdx) {
     const cell = cells[cellIdx];
-    if (!cell || !cell.ctx) return;
-    if (cell.undoStack.length >= MAX_UNDO) cell.undoStack.shift();
-    cell.undoStack.push(cell.ctx.getImageData(0, 0, cell.canvas.width, cell.canvas.height));
+    if (!cell || !cell.canvas || !cell.ctx) return;
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    const rect = cell.canvas.getBoundingClientRect();
+    const size = rect.width > 0 ? rect.width : (cellIdx === 0 ? 300 : 230);
+    cell.canvas.width = Math.round(size * dpr);
+    cell.canvas.height = Math.round(size * dpr);
+    cell.ctx.setTransform(1, 0, 0, 1, 0, 0); // 変形リセット
+    cell.ctx.scale(dpr, dpr);
+  }
+
+  function redrawCell(cellIdx) {
+    const cell = cells[cellIdx];
+    if (!cell || !cell.canvas || !cell.ctx) return;
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    cell.ctx.clearRect(0, 0, cell.canvas.width / dpr, cell.canvas.height / dpr);
+
+    cell.strokes.forEach(strokeObj => {
+      drawStroke(cell.ctx, strokeObj);
+    });
+  }
+
+  function drawStroke(ctx, strokeObj) {
+    const pts = strokeObj.points;
+    if (!pts || pts.length === 0) return;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (strokeObj.tool === 'pencil') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#1e293b';
+    } else if (strokeObj.tool === 'redpen') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#dc2626';
+    } else if (strokeObj.tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+    }
+
+    if (pts.length === 1) {
+      const p = pts[0];
+      const width = strokeObj.tool === 'eraser' ? 26 : (5 + (p.pressure || 0.6) * 5);
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, width / 2, 0, Math.PI * 2);
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fill();
+    } else {
+      for (let i = 1; i < pts.length; i++) {
+        const p0 = pts[i - 1];
+        const p1 = pts[i];
+        const pVal = p1.pressure || 0.6;
+        const width = strokeObj.tool === 'eraser' ? 26 : (5 + pVal * 5);
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   function handlePointerDown(e, cellIdx) {
     e.preventDefault();
     isDrawing = true;
     activeCellIdx = cellIdx;
+    activePointerId = e.pointerId;
     const cell = cells[cellIdx];
-    saveState(cellIdx);
+
+    if (cell.canvas && cell.canvas.setPointerCapture) {
+      try { cell.canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    }
 
     const pos = getPos(e, cell.canvas);
-    cell.ctx.beginPath();
-    cell.ctx.moveTo(pos.x, pos.y);
-    applyStrokeStyle(cell.ctx, e.pressure);
-
     strokeStartTime = Date.now();
-    cell.currentStroke = [ [Math.round(pos.x)], [Math.round(pos.y)], [0] ];
+    const pVal = (e.pressure && e.pressure > 0) ? e.pressure : 0.6;
+
+    cell.currentStroke = {
+      tool: currentTool,
+      points: [{ x: pos.x, y: pos.y, pressure: pVal, t: 0 }],
+      apiStroke: [ [Math.round(pos.x)], [Math.round(pos.y)], [0] ]
+    };
+
+    drawStrokeSegment(cell.ctx, currentTool, pos, pos, pVal);
   }
 
   function handlePointerMove(e, cellIdx) {
@@ -4167,16 +4583,45 @@ const WritingCanvas = (() => {
 
     const cell = cells[cellIdx];
     const pos = getPos(e, cell.canvas);
-    applyStrokeStyle(cell.ctx, e.pressure);
-    cell.ctx.lineTo(pos.x, pos.y);
-    cell.ctx.stroke();
+    const pVal = (e.pressure && e.pressure > 0) ? e.pressure : 0.6;
+    const elapsed = Date.now() - strokeStartTime;
 
     if (cell.currentStroke) {
-      const elapsed = Date.now() - strokeStartTime;
-      cell.currentStroke[0].push(Math.round(pos.x));
-      cell.currentStroke[1].push(Math.round(pos.y));
-      cell.currentStroke[2].push(elapsed);
+      const lastPt = cell.currentStroke.points[cell.currentStroke.points.length - 1];
+      cell.currentStroke.points.push({ x: pos.x, y: pos.y, pressure: pVal, t: elapsed });
+      cell.currentStroke.apiStroke[0].push(Math.round(pos.x));
+      cell.currentStroke.apiStroke[1].push(Math.round(pos.y));
+      cell.currentStroke.apiStroke[2].push(elapsed);
+
+      drawStrokeSegment(cell.ctx, cell.currentStroke.tool, lastPt, pos, pVal);
     }
+  }
+
+  function drawStrokeSegment(ctx, tool, p0, p1, pressure) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const p = pressure && pressure > 0 ? pressure : 0.6;
+    if (tool === 'pencil') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 5 + p * 5;
+    } else if (tool === 'redpen') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 5 + p * 5;
+    } else if (tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.lineWidth = 26;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function handlePointerUp(e, cellIdx) {
@@ -4184,12 +4629,16 @@ const WritingCanvas = (() => {
     e.preventDefault();
     isDrawing = false;
     const cell = cells[cellIdx];
-    if (cell) {
-      cell.ctx.closePath();
-      if (cell.currentStroke && cell.currentStroke[0].length > 0) {
-        cell.strokes.push(cell.currentStroke);
-        cell.currentStroke = null;
-      }
+
+    if (cell && cell.canvas && cell.canvas.releasePointerCapture && activePointerId !== null) {
+      try { cell.canvas.releasePointerCapture(activePointerId); } catch (_) {}
+    }
+    activePointerId = null;
+
+    if (cell && cell.currentStroke && cell.currentStroke.points.length > 0) {
+      cell.strokes.push(cell.currentStroke);
+      undoActionStack.push({ type: 'stroke', cellIdx });
+      cell.currentStroke = null;
     }
   }
 
@@ -4199,26 +4648,6 @@ const WritingCanvas = (() => {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
     };
-  }
-
-  function applyStrokeStyle(targetCtx, pressure) {
-    targetCtx.lineCap = 'round';
-    targetCtx.lineJoin = 'round';
-
-    const p = pressure && pressure > 0 ? pressure : 0.6;
-
-    if (currentTool === 'pencil') {
-      targetCtx.globalCompositeOperation = 'source-over';
-      targetCtx.strokeStyle = '#1e293b';
-      targetCtx.lineWidth = 5 + p * 5;
-    } else if (currentTool === 'redpen') {
-      targetCtx.globalCompositeOperation = 'source-over';
-      targetCtx.strokeStyle = '#dc2626';
-      targetCtx.lineWidth = 5 + p * 5;
-    } else if (currentTool === 'eraser') {
-      targetCtx.globalCompositeOperation = 'destination-out';
-      targetCtx.lineWidth = 26;
-    }
   }
 
   function setTool(tool) {
@@ -4237,40 +4666,59 @@ const WritingCanvas = (() => {
   }
 
   function undo() {
-    const cell = cells[activeCellIdx];
-    if (!cell || !cell.ctx || cell.undoStack.length === 0) return;
+    if (undoActionStack.length === 0) return;
     SoundFx.playTap();
-    const last = cell.undoStack.pop();
-    cell.ctx.putImageData(last, 0, 0);
-    if (cell.strokes.length > 0) cell.strokes.pop();
+    const action = undoActionStack.pop();
+
+    if (action.type === 'stroke') {
+      const cell = cells[action.cellIdx];
+      if (cell && cell.strokes.length > 0) {
+        cell.strokes.pop();
+        redrawCell(action.cellIdx);
+      }
+    } else if (action.type === 'clear') {
+      action.savedCells.forEach(({ cellIdx, strokes }) => {
+        cells[cellIdx].strokes = [...strokes];
+        redrawCell(cellIdx);
+      });
+    }
   }
 
   function clear() {
     SoundFx.playTap();
+    const savedCells = cells.map((cell, idx) => ({
+      cellIdx: idx,
+      strokes: [...cell.strokes]
+    }));
+    undoActionStack.push({ type: 'clear', savedCells });
+
     cells.forEach((cell, idx) => {
-      if (cell.canvas && cell.ctx) {
-        saveState(idx);
-        cell.ctx.clearRect(0, 0, cell.canvas.width, cell.canvas.height);
-        cell.strokes = [];
-        cell.currentStroke = null;
-      }
+      cell.strokes = [];
+      cell.currentStroke = null;
+      redrawCell(idx);
     });
   }
 
   function reset() {
-    cells.forEach(cell => {
-      cell.undoStack = [];
+    undoActionStack = [];
+    cells.forEach((cell, idx) => {
       cell.strokes = [];
       cell.currentStroke = null;
       if (cell.ctx && cell.canvas) {
-        cell.ctx.clearRect(0, 0, cell.canvas.width, cell.canvas.height);
+        updateCanvasResolution(idx);
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+        cell.ctx.clearRect(0, 0, cell.canvas.width / dpr, cell.canvas.height / dpr);
       }
     });
     setTool('pencil');
   }
 
   function getStrokes(cellIdx) {
-    return (cells[cellIdx] && cells[cellIdx].strokes) || [];
+    const cell = cells[cellIdx];
+    if (!cell || !cell.strokes) return [];
+    return cell.strokes
+      .filter(s => s.tool !== 'eraser' && s.apiStroke && s.apiStroke[0].length > 0)
+      .map(s => s.apiStroke);
   }
 
   return {
@@ -4287,10 +4735,12 @@ const WritingCanvas = (() => {
 async function recognizeHandwritingAPI(strokes, width = 300, height = 300) {
   if (!strokes || strokes.length === 0) return [];
 
+  const userAgent = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : 'WebBrowser';
+
   const payload = {
     app_version: 0.4,
     api_level: "537.36",
-    device: "5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+    device: userAgent,
     input_type: "0",
     options: "enable_pre_space",
     requests: [
@@ -4348,7 +4798,7 @@ function generateWritingQuestions(grade, count) {
 function openWritingStart() {
   SoundFx.playTap();
   const acc = accounts[currentAccountId];
-  const grade = acc ? calcGrade(acc.birthYear) : 1;
+  const grade = getGradeForAccount(acc);
 
   const descEl = document.getElementById('writing-ratio-desc');
   if (descEl) {
@@ -4360,12 +4810,28 @@ function openWritingStart() {
   }
 
   showScreen('screen-writing-start');
+
+  // 初回AI採点説明モーダルの表示判定
+  if (localStorage.getItem('writing_ai_consent_agreed') !== 'true') {
+    const modalConsent = document.getElementById('modal-writing-ai-consent');
+    if (modalConsent) {
+      modalConsent.style.display = 'flex';
+      const btnConsent = document.getElementById('btn-writing-ai-consent-ok');
+      if (btnConsent) {
+        btnConsent.onclick = () => {
+          localStorage.setItem('writing_ai_consent_agreed', 'true');
+          modalConsent.style.display = 'none';
+          SoundFx.playTap();
+        };
+      }
+    }
+  }
 }
 
 function startWritingQuiz() {
   SoundFx.playTap();
   const acc = accounts[currentAccountId];
-  const grade = acc ? calcGrade(acc.birthYear) : 1;
+  const grade = getGradeForAccount(acc);
 
   writingQuestions = generateWritingQuestions(grade, writingSelectedCount);
   if (writingQuestions.length === 0) {
@@ -4449,13 +4915,36 @@ async function checkWritingAnswer() {
   const targetKanji = q.kanji;
   const isDouble = targetKanji.length >= 2;
 
+  const strokes1 = WritingCanvas.getStrokes(0);
+  const strokes2 = isDouble ? WritingCanvas.getStrokes(1) : [];
+
+  const isAiEnabled = localStorage.getItem('setting_ai_grading_enabled') !== 'false';
+  const isOnline = (typeof navigator !== 'undefined' && navigator.onLine !== false);
+
+  const textEl = document.getElementById('ai-recognized-text');
+  const msgEl = document.getElementById('ai-verdict-msg');
+
+  // 1. AI採点OFF または オフラインの場合の手動採点フォールバック
+  if (!isAiEnabled || !isOnline) {
+    document.getElementById('btn-writing-check-answer').style.display = 'none';
+    if (textEl) {
+      textEl.textContent = !isAiEnabled ? '【手動採点】' : '【オフライン】';
+    }
+    if (msgEl) {
+      msgEl.className = 'ai-verdict-msg';
+      msgEl.textContent = !isAiEnabled
+        ? '🤖 AI採点はOFFです。お手本と見比べて○・×ボタンで採点してね！'
+        : '📶 いまはAI採点がつかえないので、お手本とおうちの人にみてもらってね！';
+    }
+    document.getElementById('writing-grading-area').style.display = 'flex';
+    updateWritingOverlays(true);
+    return;
+  }
+
   // ボタンを非表示にし、AI判定中ローディングを表示
   document.getElementById('btn-writing-check-answer').style.display = 'none';
   const loadingEl = document.getElementById('writing-ai-loading');
   if (loadingEl) loadingEl.style.display = 'flex';
-
-  const strokes1 = WritingCanvas.getStrokes(0);
-  const strokes2 = isDouble ? WritingCanvas.getStrokes(1) : [];
 
   // Google Handwriting API で認識
   const [candidates1, candidates2] = await Promise.all([
@@ -4465,6 +4954,19 @@ async function checkWritingAnswer() {
 
   if (loadingEl) loadingEl.style.display = 'none';
 
+  // 3. 通信エラー等で空候補が返ってきた場合のフォールバック（文字は書かれている場合）
+  const hasStrokes = strokes1.length > 0 || (isDouble && strokes2.length > 0);
+  if (hasStrokes && candidates1.length === 0 && (isDouble ? candidates2.length === 0 : true)) {
+    if (textEl) textEl.textContent = '【AI通信エラー】';
+    if (msgEl) {
+      msgEl.className = 'ai-verdict-msg';
+      msgEl.textContent = 'いまAI採点がお返事できませんでした。お手本と見比べて○・×で判定してね！';
+    }
+    document.getElementById('writing-grading-area').style.display = 'flex';
+    updateWritingOverlays(true);
+    return;
+  }
+
   // 認識された文字プレビュー
   const char1 = candidates1[0] || (strokes1.length === 0 ? '（未入力）' : '？');
   const char2 = isDouble ? (candidates2[0] || (strokes2.length === 0 ? '（未入力）' : '？')) : '';
@@ -4473,9 +4975,6 @@ async function checkWritingAnswer() {
   const match1 = candidates1.slice(0, 8).includes(targetKanji[0]);
   const match2 = isDouble ? candidates2.slice(0, 8).includes(targetKanji[1]) : true;
   const isCorrect = match1 && match2;
-
-  const textEl = document.getElementById('ai-recognized-text');
-  const msgEl = document.getElementById('ai-verdict-msg');
 
   if (textEl) {
     textEl.textContent = isDouble ? `【${char1}】【${char2}】` : `【${char1}】`;
@@ -4517,20 +5016,6 @@ function handleWritingGrading(isCorrect) {
     writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
   } else {
     SoundFx.playWrong();
-    if (acc) {
-      if (!acc.weakQuestions) acc.weakQuestions = [];
-      const exists = acc.weakQuestions.some(w => w.question === q.q && w.type === 'writing');
-      if (!exists) {
-        acc.weakQuestions.push({
-          type: 'writing',
-          question: q.q,
-          target: q.kanji,
-          reading: q.reading,
-          grade: q.grade
-        });
-        saveAccounts();
-      }
-    }
   }
 
   writingCurrentIndex++;
@@ -4563,51 +5048,16 @@ function showWritingResult() {
   document.getElementById('writing-result-total').textContent = total;
   document.getElementById('writing-result-accuracy').textContent = `正解率 ${pct}%`;
 
+  // ポイント付与 & 保存（月間・日別上限判定）
   const acc = accounts[currentAccountId];
-  let actualEarned = 0;
-  let limitNotice = '';
-
-  if (acc && writingEarnedPoints > 0) {
-    checkAndResetLimits(acc);
-    const limits = acc.monthlyLimits || getDefaultLimits();
-
-    const monthlyRemain = Math.max(0, limits.maxMonthly - (limits.monthlyEarned || 0));
-    const dailyRemain = limits.carryOverUnlocked
-      ? monthlyRemain
-      : Math.max(0, limits.maxDaily - (limits.todayEarned || 0));
-
-    const availableLimit = Math.min(monthlyRemain, dailyRemain);
-    actualEarned = Math.min(writingEarnedPoints, availableLimit);
-    actualEarned = Math.round(actualEarned * 100) / 100;
-
-    if (actualEarned < writingEarnedPoints) {
-      if (monthlyRemain <= 0) {
-        limitNotice = `🌟 今月のポイント上限（${limits.maxMonthly}pt）を達成したよ！すごい！来月1日にリセットされるよ！（練習はそのまま続けられるよ）`;
-      } else if (dailyRemain <= 0) {
-        limitNotice = `🌟 今日のポイント目安上限（${limits.maxDaily}pt）を達成したよ！あしたもがんばろう！（練習はそのまま続けられるよ）`;
-      } else {
-        limitNotice = `🌟 上限まであと ${formatPoints(actualEarned)}pt 獲得しました！（残りの問題も練習できるよ）`;
-      }
-    }
-
-    if (actualEarned > 0) {
-      acc.points = Math.round(((acc.points || 0) + actualEarned) * 100) / 100;
-      limits.monthlyEarned = Math.round(((limits.monthlyEarned || 0) + actualEarned) * 100) / 100;
-      limits.todayEarned = Math.round(((limits.todayEarned || 0) + actualEarned) * 100) / 100;
-
-      if (!acc.pointHistory) acc.pointHistory = [];
-      acc.pointHistory.push({
-        type: 'earn',
-        title: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
-        amount: actualEarned,
-        date: Date.now()
-      });
-      recordStudyLog(acc, '✍️ 漢字書き取り', total, actualEarned);
-
-      saveAccounts();
-      renderAccountScreen();
-    }
-  }
+  const { actualEarnedPoints: actualEarned, limitNoticeText: limitNotice } = applyEarnedPoints(acc, {
+    subjectKey: 'writing',
+    subjectName: '✍️ 漢字書き取り',
+    historyTitle: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
+    requestedPoints: writingEarnedPoints,
+    totalQuestions: total,
+    correctCount: writingCorrectCount
+  });
 
   document.getElementById('writing-result-earned-points').textContent = formatPoints(actualEarned);
   const noticeEl = document.getElementById('writing-result-limit-notice');
@@ -4637,9 +5087,7 @@ function showWritingResult() {
   ConfettiFx.launch(writingCorrectCount >= writingQuestions.length ? 80 : 50);
 
   // 🏆 実績判定 & ポップアップ
-  checkAndUnlockAchievements(acc, {
-    writingPerfect: writingCorrectCount === total && total >= 5
-  });
+  checkAndUnlockAchievements(acc);
   setTimeout(() => showPendingBadgePopups(), 600);
 }
 
@@ -5062,7 +5510,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ✍️ 漢字書き取りクイズ画面
   const writingQuizQuit = document.getElementById('btn-writing-quiz-quit');
-  if (writingQuizQuit) writingQuizQuit.addEventListener('click', renderPortalScreen);
+  if (writingQuizQuit) {
+    writingQuizQuit.addEventListener('click', () => {
+      if (confirm('書き取りドリルをとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
+        renderPortalScreen();
+      }
+    });
+  }
 
   const writingSkipBtn = document.getElementById('btn-writing-skip');
   if (writingSkipBtn) writingSkipBtn.addEventListener('click', skipWritingQuestion);
@@ -5135,7 +5589,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 算数クエスト画面イベント
   document.getElementById('btn-math-back-portal').addEventListener('click', renderPortalScreen);
-  document.getElementById('btn-math-quit').addEventListener('click', renderPortalScreen);
+  document.getElementById('btn-math-quit').addEventListener('click', () => {
+    if (confirm('算数クエストをとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
+      renderPortalScreen();
+    }
+  });
   document.getElementById('btn-math-home').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-math-retry').addEventListener('click', startMathQuiz);
   document.getElementById('btn-math-start-run').addEventListener('click', startMathQuiz);
@@ -5167,7 +5625,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ⌨️ タイピング画面イベント
   document.getElementById('btn-typing-back-portal').addEventListener('click', renderPortalScreen);
-  document.getElementById('btn-typing-quit').addEventListener('click', renderPortalScreen);
+  document.getElementById('btn-typing-quit').addEventListener('click', () => {
+    if (confirm('タイピング特訓をとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
+      stopQuestionTimer();
+      isTypingInputBlocked = false;
+      renderPortalScreen();
+    }
+  });
   document.getElementById('btn-typing-home').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-typing-retry').addEventListener('click', startTypingGame);
   document.getElementById('btn-typing-start-run').addEventListener('click', startTypingGame);
@@ -5317,6 +5781,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btnClaimBonus.addEventListener('click', claimLoginBonus);
   }
 
+  // ⚔️ 算数モンスター討伐モード切り替えイベント
+  const btnMathNormal = document.getElementById('btn-math-mode-normal');
+  if (btnMathNormal) {
+    btnMathNormal.addEventListener('click', () => setMathBattleMode('normal'));
+  }
+  const btnMathMonster = document.getElementById('btn-math-mode-monster');
+  if (btnMathMonster) {
+    btnMathMonster.addEventListener('click', () => setMathBattleMode('monster'));
+  }
+
   // 🏆 称号・バッジコレクションモーダルイベント
   const btnPortalBadges = document.getElementById('btn-portal-badges');
   if (btnPortalBadges) {
@@ -5334,11 +5808,13 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('screen-account');
   });
   document.getElementById('btn-quit').addEventListener('click', () => {
-    updateStartScreenWeakBanner();
-    if (currentAccountId !== null) {
-      renderPortalScreen();
-    } else {
-      showScreen('screen-account');
+    if (confirm('漢字クイズをとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
+      updateStartScreenWeakBanner();
+      if (currentAccountId !== null) {
+        renderPortalScreen();
+      } else {
+        showScreen('screen-account');
+      }
     }
   });
   document.getElementById('btn-retry').addEventListener('click', () => startQuiz(isWeakTrainingMode));

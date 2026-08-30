@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakuwaku-learning-v26';
+const CACHE_NAME = 'wakuwaku-learning-v28';
 const ASSETS = [
   './',
   './index.html',
@@ -35,8 +35,14 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // 為替APIなどの外部通信はネットワーク優先、ローカルアセットはキャッシュ優先
-  if (event.request.url.includes('api.exchangerate-api.com') || event.request.url.includes('googleapis.com') || event.request.url.includes('gstatic.com')) {
+  // 為替API・手書き認識APIなどの外部通信はネットワーク優先、ローカルアセットはキャッシュ優先
+  if (
+    event.request.url.includes('open.er-api.com') ||
+    event.request.url.includes('api.exchangerate-api.com') ||
+    event.request.url.includes('inputtools.google.com') ||
+    event.request.url.includes('googleapis.com') ||
+    event.request.url.includes('gstatic.com')
+  ) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(event.request))
     );
