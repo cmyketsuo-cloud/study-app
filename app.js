@@ -4,7 +4,20 @@
  */
 
 // =============================================
-//  🏆 ACHIEVEMENTS & BADGE DEFINITIONS (v26)
+//  🌸 APP VERSION DEFINITION (v29)
+// =============================================
+const APP_VERSION_CODE = 'v29';
+const APP_VERSION_LABEL = '🌸 ばーじょん29 🌸';
+
+function initVersionBadges() {
+  const badges = document.querySelectorAll('.cute-version-badge');
+  badges.forEach(badge => {
+    badge.textContent = APP_VERSION_LABEL;
+  });
+}
+
+// =============================================
+//  🏆 ACHIEVEMENTS & BADGE DEFINITIONS
 // =============================================
 const ACHIEVEMENTS = [
   // 学習・ストリーク系
@@ -5315,6 +5328,7 @@ const CharacterGuide = (() => {
 //  INITIALIZATION
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
+  initVersionBadges();
   ConfettiFx.init();
   SoundFx.updateSoundButton();
   const soundToggleBtn = document.getElementById('btn-sound-toggle');
