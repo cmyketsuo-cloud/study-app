@@ -9,6 +9,28 @@ function getRandomInt(min, max) {
 }
 
 /**
+ * 最大公約数 (GCD)
+ */
+function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) {
+    const t = b;
+    b = a % b;
+    a = t;
+  }
+  return a || 1;
+}
+
+/**
+ * 最小公倍数 (LCM)
+ */
+function lcm(a, b) {
+  if (a === 0 || b === 0) return 0;
+  return Math.abs(a * b) / gcd(a, b);
+}
+
+/**
  * 1年生の問題生成
  */
 function genG1Problem() {
@@ -220,13 +242,143 @@ function genG4Problem() {
 }
 
 /**
- * 5年生の問題生成（小数かけわり・割合基礎・平均）
+ * 5年生の問題生成（分数約分・通分たし引き・小数かけわり・割合基礎・平均）
  */
 function genG5Problem() {
-  const types = ['dec_mult', 'dec_div', 'average', 'percentage'];
+  const types = ['frac_reduce', 'frac_add', 'frac_sub', 'dec_mult', 'dec_div', 'average', 'percentage'];
   const type = types[getRandomInt(0, types.length - 1)];
 
-  if (type === 'dec_mult') {
+  if (type === 'frac_reduce') {
+    // 既約分数リスト (1 <= n < d <= 12, gcd(n,d) === 1)
+    const baseFractions = [
+      [1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5],
+      [1, 6], [5, 6], [1, 8], [3, 8], [5, 8], [7, 8], [1, 10], [3, 10], [7, 10], [9, 10]
+    ];
+    const [n, d] = baseFractions[getRandomInt(0, baseFractions.length - 1)];
+    const k = getRandomInt(2, 4); // 公約数 (2, 3, 4)
+    const N = n * k;
+    const D = d * k;
+    return {
+      expr: `${N}/${D}`,
+      ans: `${n}/${d}`,
+      ansType: 'fraction',
+      ansNumerator: n,
+      ansDenominator: d,
+      text: `${N}/${D} を約分して、もっとも簡単な分数にしよう！`,
+      hint: `分子と分母を同じ数（公約数の ${k} など）でわって約分しよう！`,
+      points: 2,
+      genre: "分数の約分"
+    };
+  } else if (type === 'frac_add') {
+    // 通分が必要な異分母のたし算
+    const denPairs = [
+      [2, 3], [2, 5], [3, 4], [3, 5], [4, 5], [3, 8],
+      [4, 6], [6, 8], [2, 4], [3, 6], [4, 8], [5, 10], [2, 6], [4, 10], [6, 9], [6, 10]
+    ];
+    let [d1, d2] = denPairs[getRandomInt(0, denPairs.length - 1)];
+    if (Math.random() < 0.5) {
+      const tmp = d1; d1 = d2; d2 = tmp;
+    }
+
+    let n1 = getRandomInt(1, d1 - 1);
+    let n2 = getRandomInt(1, d2 - 1);
+
+    let rawN = n1 * d2 + n2 * d1;
+    let rawD = d1 * d2;
+    let g = gcd(rawN, rawD);
+    let ansN = rawN / g;
+    let ansD = rawD / g;
+
+    // 答えが整数(ansD === 1)になってしまう場合は調整
+    if (ansD === 1) {
+      n2 = (n2 % (d2 - 1)) + 1;
+      rawN = n1 * d2 + n2 * d1;
+      g = gcd(rawN, rawD);
+      ansN = rawN / g;
+      ansD = rawD / g;
+      if (ansD === 1) {
+        n1 = 1; d1 = 2; n2 = 1; d2 = 3;
+        ansN = 5; ansD = 6;
+      }
+    }
+
+    const isImproper = ansN > ansD;
+    const subNotice = isImproper ? "（※約分した仮分数で答えよう）" : "（※約分して答えよう）";
+    const subHint = isImproper
+      ? "分母をそろえて（通分して）たし算しよう！答えが1より大きいときは仮分数で約分して答えてね。"
+      : "分母をそろえて（通分して）たし算しよう！答えは約分してね。";
+
+    return {
+      expr: `${n1}/${d1} + ${n2}/${d2}`,
+      ans: `${ansN}/${ansD}`,
+      ansType: 'fraction',
+      ansNumerator: ansN,
+      ansDenominator: ansD,
+      text: `${n1}/${d1} + ${n2}/${d2} は？ ${subNotice}`,
+      hint: subHint,
+      points: 3,
+      genre: "分数のたし算"
+    };
+  } else if (type === 'frac_sub') {
+    // 通分が必要な異分母のひき算 (真分数同士: n1 < d1, n2 < d2 かつ n1/d1 > n2/d2)
+    const denPairs = [
+      [2, 3], [2, 5], [3, 4], [3, 5], [4, 5], [3, 8],
+      [4, 6], [6, 8], [2, 4], [3, 6], [4, 8], [5, 10], [2, 6], [4, 10], [6, 9], [6, 10],
+      [3, 10], [7, 10], [5, 6], [5, 8], [7, 8], [5, 12], [7, 12]
+    ];
+    let [d1, d2] = denPairs[getRandomInt(0, denPairs.length - 1)];
+    if (Math.random() < 0.5) {
+      const tmp = d1; d1 = d2; d2 = tmp;
+    }
+
+    // d1, d2 において n1/d1 > n2/d2 を満たす真分数のすべての組み合わせをリストアップ
+    const validPairs = [];
+    for (let i = 1; i < d1; i++) {
+      for (let j = 1; j < d2; j++) {
+        if (i * d2 > j * d1) {
+          validPairs.push([i, j]);
+        }
+      }
+    }
+
+    let n1, n2;
+    if (validPairs.length > 0) {
+      const chosen = validPairs[getRandomInt(0, validPairs.length - 1)];
+      n1 = chosen[0];
+      n2 = chosen[1];
+    } else {
+      const swappedPairs = [];
+      for (let i = 1; i < d2; i++) {
+        for (let j = 1; j < d1; j++) {
+          if (i * d1 > j * d2) {
+            swappedPairs.push([i, j]);
+          }
+        }
+      }
+      const chosen = swappedPairs[getRandomInt(0, swappedPairs.length - 1)];
+      const tmpD = d1; d1 = d2; d2 = tmpD;
+      n1 = chosen[0];
+      n2 = chosen[1];
+    }
+
+    const rawN = n1 * d2 - n2 * d1;
+    const rawD = d1 * d2;
+    const g = gcd(rawN, rawD);
+    const ansN = rawN / g;
+    const ansD = rawD / g;
+
+    return {
+      expr: `${n1}/${d1} - ${n2}/${d2}`,
+      ans: `${ansN}/${ansD}`,
+      ansType: 'fraction',
+      ansNumerator: ansN,
+      ansDenominator: ansD,
+      text: `${n1}/${d1} - ${n2}/${d2} は？（※約分して答えよう）`,
+      hint: "分母をそろえて（通分して）ひき算しよう！答えは約分してね。",
+      points: 3,
+      genre: "分数のひき算"
+    };
+  } else if (type === 'dec_mult') {
     const a = (getRandomInt(12, 45) / 10).toFixed(1);
     const b = getRandomInt(2, 6);
     const ans = (parseFloat(a) * b).toFixed(1);

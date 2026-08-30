@@ -3445,6 +3445,102 @@ body {
   animation: pulse 1.5s infinite;
 }
 
+/* Fraction Answer Box (2 slots) */
+.math-frac-ans-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.math-frac-slot {
+  background: #ffffff;
+  border: 2.5px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 0.15rem 1.2rem;
+  min-width: 120px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.math-frac-slot .math-frac-label-tag {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.math-frac-slot.active {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 3.5px rgba(16, 185, 129, 0.28), inset 0 2px 4px rgba(0,0,0,0.04);
+  transform: scale(1.03);
+}
+
+.math-frac-slot.active .math-frac-label-tag {
+  color: #065f46;
+  background: #a7f3d0;
+}
+
+.math-frac-slot.shake {
+  animation: popShake 0.4s ease;
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.math-frac-line {
+  width: 100%;
+  min-width: 120px;
+  height: 4px;
+  background: #1e293b;
+  border-radius: 2px;
+}
+
+/* Inline Expression Fractions */
+.math-frac-inline {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 0.85em;
+  padding: 0 0.15em;
+  line-height: 1;
+}
+
+.math-frac-inline .num,
+.math-frac-inline .den {
+  font-size: 0.72em;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.math-frac-inline .bar {
+  display: block;
+  width: 100%;
+  height: 2.5px;
+  background: currentColor;
+  margin: 2px 0;
+  border-radius: 1px;
+}
+
 /* Giant Keypad for iPad */
 .math-keypad-card {
   background: #ffffff;

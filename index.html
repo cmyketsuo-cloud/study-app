@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん29 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん30 🌸</span>
       </div>
     </div>
   </div>
@@ -369,7 +369,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん29 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん30 🌸</span>
       </div>
     </div>
   </div>
@@ -736,10 +736,23 @@
           <div class="math-hint-box" id="math-hint-box">💡 意味: 一の位から順番に計算しよう！</div>
 
           <!-- 入力中の数字表示ボックス -->
-          <div class="math-answer-box">
+          <div class="math-answer-box" id="math-answer-box">
             <span class="math-ans-label">あなたの答え:</span>
+            <!-- 整数・小数用 (1段) -->
             <div class="math-ans-display" id="math-ans-display">
               <span class="math-ans-val placeholder" id="math-ans-val">?</span>
+            </div>
+            <!-- 分数用 (分子 / 分母 2段) -->
+            <div class="math-frac-ans-display" id="math-frac-ans-display" style="display: none;">
+              <div class="math-frac-slot math-frac-num active" id="math-frac-num-slot" role="button" tabindex="0" aria-label="分子を入力">
+                <span class="math-frac-label-tag">分子</span>
+                <span class="math-ans-val placeholder" id="math-frac-num-val">?</span>
+              </div>
+              <div class="math-frac-line"></div>
+              <div class="math-frac-slot math-frac-den" id="math-frac-den-slot" role="button" tabindex="0" aria-label="分母を入力">
+                <span class="math-frac-label-tag">分母</span>
+                <span class="math-ans-val placeholder" id="math-frac-den-val">?</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1893,10 +1906,10 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260830_v29"></script>
-  <script src="writing_data.js?v=20260830_v29"></script>
-  <script src="math_data.js?v=20260830_v29"></script>
-  <script src="typing_data.js?v=20260830_v29"></script>
-  <script src="app.js?v=20260830_v29"></script>
+  <script src="quiz_data.js?v=20260830_v30"></script>
+  <script src="writing_data.js?v=20260830_v30"></script>
+  <script src="math_data.js?v=20260830_v30"></script>
+  <script src="typing_data.js?v=20260830_v30"></script>
+  <script src="app.js?v=20260830_v30"></script>
 </body>
 </html>

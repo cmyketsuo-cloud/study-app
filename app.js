@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v29)
+//  🌸 APP VERSION DEFINITION (v30)
 // =============================================
-const APP_VERSION_CODE = 'v29';
-const APP_VERSION_LABEL = '🌸 ばーじょん29 🌸';
+const APP_VERSION_CODE = 'v30';
+const APP_VERSION_LABEL = '🌸 ばーじょん30 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -3243,6 +3243,9 @@ let mathScore = 0;
 let mathSelectedCount = 10;
 let mathSessionEarnedPoints = 0;
 let mathInputVal = '';
+let mathFracNumVal = '';
+let mathFracDenVal = '';
+let mathFracActiveSlot = 'num'; // 'num' | 'den'
 let mathWrongAnswers = [];
 let mathAnswered = false;
 
@@ -3336,12 +3339,79 @@ function startMathQuiz() {
   showScreen('screen-math-quiz');
 }
 
+function formatMathExpr(expr) {
+  if (!expr) return '';
+  return String(expr).replace(/(\d+)\/(\d+)/g, '<span class="math-frac-inline"><span class="num">$1</span><span class="bar"></span><span class="den">$2</span></span>');
+}
+
+function setMathFracActiveSlot(slot) {
+  if (mathAnswered) return;
+  mathFracActiveSlot = slot === 'den' ? 'den' : 'num';
+  SoundFx.playTap();
+  updateMathFracDisplay();
+}
+
+function updateMathFracDisplay() {
+  const numEl = document.getElementById('math-frac-num-val');
+  const denEl = document.getElementById('math-frac-den-val');
+  const numSlot = document.getElementById('math-frac-num-slot');
+  const denSlot = document.getElementById('math-frac-den-slot');
+
+  if (numEl) {
+    if (mathFracNumVal === '') {
+      numEl.textContent = '?';
+      numEl.className = 'math-ans-val placeholder';
+    } else {
+      numEl.textContent = mathFracNumVal;
+      numEl.className = 'math-ans-val';
+    }
+  }
+
+  if (denEl) {
+    if (mathFracDenVal === '') {
+      denEl.textContent = '?';
+      denEl.className = 'math-ans-val placeholder';
+    } else {
+      denEl.textContent = mathFracDenVal;
+      denEl.className = 'math-ans-val';
+    }
+  }
+
+  if (numSlot) numSlot.classList.toggle('active', mathFracActiveSlot === 'num');
+  if (denSlot) denSlot.classList.toggle('active', mathFracActiveSlot === 'den');
+}
+
 function renderMathQuestion() {
   mathAnswered = false;
   mathInputVal = '';
-  updateMathInputDisplay();
+  mathFracNumVal = '';
+  mathFracDenVal = '';
+  mathFracActiveSlot = 'num';
 
   const q = mathQuestions[mathCurrentIndex];
+  const isFrac = q && (q.ansType === 'fraction' || (typeof q.ans === 'string' && q.ans.includes('/')));
+
+  const singleDisplay = document.getElementById('math-ans-display');
+  const fracDisplay = document.getElementById('math-frac-ans-display');
+  const dotBtn = document.querySelector('.math-key-btn[data-key="."]');
+
+  if (isFrac) {
+    if (singleDisplay) singleDisplay.style.display = 'none';
+    if (fracDisplay) fracDisplay.style.display = 'flex';
+    if (dotBtn) {
+      dotBtn.style.opacity = '0.35';
+      dotBtn.style.pointerEvents = 'none';
+    }
+    updateMathFracDisplay();
+  } else {
+    if (singleDisplay) singleDisplay.style.display = 'block';
+    if (fracDisplay) fracDisplay.style.display = 'none';
+    if (dotBtn) {
+      dotBtn.style.opacity = '1';
+      dotBtn.style.pointerEvents = 'auto';
+    }
+    updateMathInputDisplay();
+  }
 
   document.getElementById('math-q-current').textContent = mathCurrentIndex + 1;
   const pct = (mathCurrentIndex / mathQuestions.length) * 100;
@@ -3355,7 +3425,7 @@ function renderMathQuestion() {
 
   document.getElementById('math-genre-badge').textContent = q.genre || '算数計算';
   document.getElementById('math-point-badge-text').textContent = `正解で +${mathPts}pt`;
-  document.getElementById('math-expr-text').textContent = q.expr;
+  document.getElementById('math-expr-text').innerHTML = formatMathExpr(q.expr);
   document.getElementById('math-question-text').innerHTML = addFurigana(q.text || '計算の答えを入力してね！');
   document.getElementById('math-hint-box').innerHTML = q.hint ? addFurigana(`💡 ヒント: ${q.hint}`) : '';
 
@@ -3366,25 +3436,65 @@ function renderMathQuestion() {
 
 function handleMathKey(key) {
   if (mathAnswered) return;
-  if (mathInputVal.length >= 8) return;
+  const q = mathQuestions[mathCurrentIndex];
+  const isFrac = q && (q.ansType === 'fraction' || (typeof q.ans === 'string' && q.ans.includes('/')));
 
-  // 小数点は1つまで
-  if (key === '.' && mathInputVal.includes('.')) return;
-
-  mathInputVal += key;
-  updateMathInputDisplay();
+  if (isFrac) {
+    if (key === '.') return;
+    if (mathFracActiveSlot === 'num') {
+      if (mathFracNumVal.length >= 4) return;
+      mathFracNumVal += key;
+      updateMathFracDisplay();
+    } else {
+      if (key === '0' && mathFracDenVal === '') return;
+      if (mathFracDenVal.length >= 4) return;
+      mathFracDenVal += key;
+      updateMathFracDisplay();
+    }
+  } else {
+    if (mathInputVal.length >= 8) return;
+    if (key === '.' && mathInputVal.includes('.')) return;
+    mathInputVal += key;
+    updateMathInputDisplay();
+  }
 }
 
 function handleMathBackspace() {
   if (mathAnswered) return;
-  mathInputVal = mathInputVal.slice(0, -1);
-  updateMathInputDisplay();
+  const q = mathQuestions[mathCurrentIndex];
+  const isFrac = q && (q.ansType === 'fraction' || (typeof q.ans === 'string' && q.ans.includes('/')));
+
+  if (isFrac) {
+    if (mathFracActiveSlot === 'num') {
+      mathFracNumVal = mathFracNumVal.slice(0, -1);
+    } else {
+      if (mathFracDenVal.length > 0) {
+        mathFracDenVal = mathFracDenVal.slice(0, -1);
+      } else {
+        mathFracActiveSlot = 'num';
+      }
+    }
+    updateMathFracDisplay();
+  } else {
+    mathInputVal = mathInputVal.slice(0, -1);
+    updateMathInputDisplay();
+  }
 }
 
 function handleMathClear() {
   if (mathAnswered) return;
-  mathInputVal = '';
-  updateMathInputDisplay();
+  const q = mathQuestions[mathCurrentIndex];
+  const isFrac = q && (q.ansType === 'fraction' || (typeof q.ans === 'string' && q.ans.includes('/')));
+
+  if (isFrac) {
+    mathFracNumVal = '';
+    mathFracDenVal = '';
+    mathFracActiveSlot = 'num';
+    updateMathFracDisplay();
+  } else {
+    mathInputVal = '';
+    updateMathInputDisplay();
+  }
 }
 
 function updateMathInputDisplay() {
@@ -3402,16 +3512,71 @@ function updateMathInputDisplay() {
 
 function submitMathAnswer() {
   if (mathAnswered) return;
-  if (mathInputVal.trim() === '') return;
+  const q = mathQuestions[mathCurrentIndex];
+  const isFrac = q && (q.ansType === 'fraction' || (typeof q.ans === 'string' && q.ans.includes('/')));
+
+  let isCorrect = false;
+  let isUnreduced = false;
+  let userAnsStr = '';
+  const correctAnsStr = String(q.ans).trim();
+
+  if (isFrac) {
+    if (mathFracNumVal.trim() === '' || mathFracDenVal.trim() === '') {
+      if (mathFracNumVal.trim() === '') {
+        mathFracActiveSlot = 'num';
+        const slot = document.getElementById('math-frac-num-slot');
+        if (slot) {
+          slot.classList.add('shake');
+          setTimeout(() => slot.classList.remove('shake'), 400);
+        }
+      } else {
+        mathFracActiveSlot = 'den';
+        const slot = document.getElementById('math-frac-den-slot');
+        if (slot) {
+          slot.classList.add('shake');
+          setTimeout(() => slot.classList.remove('shake'), 400);
+        }
+      }
+      updateMathFracDisplay();
+      return;
+    }
+
+    const uNum = parseInt(mathFracNumVal, 10);
+    const uDen = parseInt(mathFracDenVal, 10);
+
+    if (isNaN(uNum) || isNaN(uDen) || uDen === 0) {
+      mathFracActiveSlot = 'den';
+      mathFracDenVal = '';
+      const slot = document.getElementById('math-frac-den-slot');
+      if (slot) {
+        slot.classList.add('shake');
+        setTimeout(() => slot.classList.remove('shake'), 400);
+      }
+      updateMathFracDisplay();
+      return;
+    }
+
+    userAnsStr = `${uNum}/${uDen}`;
+
+    const parts = correctAnsStr.split('/');
+    const cNum = q.ansNumerator !== undefined ? q.ansNumerator : parseInt(parts[0], 10);
+    const cDen = q.ansDenominator !== undefined ? q.ansDenominator : parseInt(parts[1], 10);
+
+    if (uNum === cNum && uDen === cDen) {
+      isCorrect = true;
+    } else if (uNum * cDen === cNum * uDen) {
+      isCorrect = false;
+      isUnreduced = true;
+    } else {
+      isCorrect = false;
+    }
+  } else {
+    if (mathInputVal.trim() === '') return;
+    userAnsStr = mathInputVal.trim();
+    isCorrect = (userAnsStr === correctAnsStr) || (parseFloat(userAnsStr) === parseFloat(correctAnsStr));
+  }
 
   mathAnswered = true;
-  const q = mathQuestions[mathCurrentIndex];
-  const userAns = mathInputVal.trim();
-  const correctAns = q.ans.trim();
-
-  // 数値比較と文字列比較
-  const isCorrect = (userAns === correctAns) || (parseFloat(userAns) === parseFloat(correctAns));
-
   const fb = document.getElementById('math-feedback-overlay');
 
   if (isCorrect) {
@@ -3428,19 +3593,23 @@ function submitMathAnswer() {
     `;
   } else {
     SoundFx.playWrong();
+    const correctDisplay = formatMathExpr(correctAnsStr);
+    const unreducedMsg = isUnreduced
+      ? '<br><span style="font-size:0.95rem;color:#b91c1c;font-weight:700;">（もっと約分できるよ！）</span>'
+      : '';
     fb.innerHTML = `
       <span class="fb-symbol fb-wrong pop-shake">
         ❌<br>
-        <small style="font-size:1.2rem;background:#ffffff;padding:0.2rem 0.8rem;border-radius:20px;border:3px solid #ef4444;color:#991b1b;">こたえ: ${correctAns}</small>
+        <small style="font-size:1.2rem;background:#ffffff;padding:0.25rem 0.9rem;border-radius:20px;border:3px solid #ef4444;color:#991b1b;display:inline-flex;align-items:center;gap:0.3rem;">こたえ: ${correctDisplay}${unreducedMsg}</small>
       </span>
     `;
 
     mathWrongAnswers.push({
       expr: q.expr,
       question: q.text,
-      correct: correctAns,
-      yourAnswer: userAns,
-      hint: q.hint,
+      correct: correctAnsStr,
+      yourAnswer: userAnsStr,
+      hint: isUnreduced ? '答えはできるだけ約分（既約分数に）しよう！' : q.hint,
       genre: q.genre
     });
   }
@@ -3541,11 +3710,11 @@ function showMathResult() {
       item.className = 'wrong-item pop-card-mini';
       item.innerHTML = `
         <div class="wrong-kanji-wrap">
-          <span class="wrong-kanji-char">${w.expr}</span>
+          <span class="wrong-kanji-char">${formatMathExpr(w.expr)}</span>
           <span class="wrong-arrow">→</span>
-          <span class="wrong-correct-ans">答え: ${w.correct}</span>
+          <span class="wrong-correct-ans">答え: ${formatMathExpr(w.correct)}</span>
         </div>
-        <div class="wrong-your-ans">あなたの答え: <span class="wrong-ans-text">${w.yourAnswer}</span></div>
+        <div class="wrong-your-ans">あなたの答え: <span class="wrong-ans-text">${formatMathExpr(w.yourAnswer)}</span></div>
         ${w.hint ? `<div class="wrong-hint">💡 ${w.hint}</div>` : ''}
       `;
       listEl.appendChild(item);
@@ -4428,6 +4597,13 @@ window.addEventListener('keydown', (e) => {
     handleMathClear();
   } else if (e.key === 'Enter') {
     submitMathAnswer();
+  } else if (e.key === 'Tab' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    const q = mathQuestions[mathCurrentIndex];
+    const isFrac = q && (q.ansType === 'fraction' || (typeof q.ans === 'string' && q.ans.includes('/')));
+    if (isFrac) {
+      e.preventDefault();
+      setMathFracActiveSlot(mathFracActiveSlot === 'num' ? 'den' : 'num');
+    }
   }
 });
 
@@ -5636,6 +5812,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-math-back').addEventListener('click', handleMathBackspace);
   document.getElementById('btn-math-ac').addEventListener('click', handleMathClear);
   document.getElementById('btn-math-enter').addEventListener('click', submitMathAnswer);
+
+  // 算数分数スロット タップ切り替え
+  const fracNumSlot = document.getElementById('math-frac-num-slot');
+  if (fracNumSlot) fracNumSlot.addEventListener('click', () => setMathFracActiveSlot('num'));
+  const fracDenSlot = document.getElementById('math-frac-den-slot');
+  if (fracDenSlot) fracDenSlot.addEventListener('click', () => setMathFracActiveSlot('den'));
 
   // ⌨️ タイピング画面イベント
   document.getElementById('btn-typing-back-portal').addEventListener('click', renderPortalScreen);
