@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v30)
+//  🌸 APP VERSION DEFINITION (v31)
 // =============================================
-const APP_VERSION_CODE = 'v30';
-const APP_VERSION_LABEL = '🌸 ばーじょん30 🌸';
+const APP_VERSION_CODE = 'v31';
+const APP_VERSION_LABEL = '🌸 ばーじょん31 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -2850,36 +2850,16 @@ function calcQuestionPoint(q) {
   };
 }
 
-function skipQuizQuestion() {
-  if (answered) return;
-  SoundFx.playTap();
-  const acc = accounts[currentAccountId];
-  const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
-  const pool = (typeof GRADE_DATA !== 'undefined' && GRADE_DATA[grade]) ? GRADE_DATA[grade] : [];
-  const unused = pool.filter(item => !quizQuestions.some(q => q.question === item.q));
-  if (unused.length > 0) {
-    const raw = shuffle(unused)[0];
-    const distractors = getDistractors(raw.a, 3);
-    const choices = shuffle([raw.a, ...distractors]);
-    const history = loadHistory(currentAccountId);
-    const rec = history[raw.q];
-    const isWeakRevenge = rec && rec.isWeak === true;
-
-    const newQ = {
-      question: raw.q,
-      correct: raw.a,
-      choices,
-      hint: raw.h,
-      isWeakRevenge
-    };
-    quizQuestions.splice(currentIndex, 1, newQ);
-  }
-  renderQuestion();
-}
-
 let sessionEarnedPoints = 0;
+let quizSessionFinished = false;
+let quizTransitionTimer = null;
 
 function startQuiz(weakOnly = false) {
+  quizSessionFinished = false;
+  if (quizTransitionTimer) {
+    clearTimeout(quizTransitionTimer);
+    quizTransitionTimer = null;
+  }
   isWeakTrainingMode = weakOnly;
   const count = selectedCount;
 
@@ -3073,7 +3053,10 @@ function handleChoice(btn, choice, q) {
   fb.classList.add('show');
   updateScore();
 
-  setTimeout(() => {
+  if (quizTransitionTimer) clearTimeout(quizTransitionTimer);
+  quizTransitionTimer = setTimeout(() => {
+    quizTransitionTimer = null;
+    if (quizSessionFinished) return;
     fb.classList.remove('show');
     currentIndex++;
     if (currentIndex < quizQuestions.length) {
@@ -3081,7 +3064,11 @@ function handleChoice(btn, choice, q) {
     } else {
       const bar = document.getElementById('progress-bar');
       bar.style.width = '100%';
-      setTimeout(() => showResult(), 400);
+      quizTransitionTimer = setTimeout(() => {
+        quizTransitionTimer = null;
+        if (quizSessionFinished) return;
+        showResult();
+      }, 400);
     }
   }, 1200);
 }
@@ -3094,9 +3081,15 @@ function updateScore() {
 // =============================================
 //  RESULT SCREEN
 // =============================================
-function showResult() {
-  const total = quizQuestions.length;
-  const pct = Math.round((score / total) * 100);
+function showResult(totalOverride) {
+  if (quizSessionFinished) return;
+  quizSessionFinished = true;
+  if (quizTransitionTimer) {
+    clearTimeout(quizTransitionTimer);
+    quizTransitionTimer = null;
+  }
+  const total = Math.max(score, totalOverride !== undefined ? totalOverride : quizQuestions.length);
+  const pct = total > 0 ? Math.round((score / total) * 100) : 0;
 
   document.getElementById('result-correct').textContent = score;
   document.getElementById('result-total').textContent = total;
@@ -3248,6 +3241,8 @@ let mathFracDenVal = '';
 let mathFracActiveSlot = 'num'; // 'num' | 'den'
 let mathWrongAnswers = [];
 let mathAnswered = false;
+let mathSessionFinished = false;
+let mathTransitionTimer = null;
 
 let mathBattleMode = 'normal'; // 'normal' or 'monster'
 let mathComboCount = 0;
@@ -3323,6 +3318,12 @@ function startMathQuiz() {
   if (mathQuestions.length === 0) {
     alert('問題の生成に失敗しました！');
     return;
+  }
+
+  mathSessionFinished = false;
+  if (mathTransitionTimer) {
+    clearTimeout(mathTransitionTimer);
+    mathTransitionTimer = null;
   }
 
   mathCurrentIndex = 0;
@@ -3616,7 +3617,10 @@ function submitMathAnswer() {
 
   fb.classList.add('show');
 
-  setTimeout(() => {
+  if (mathTransitionTimer) clearTimeout(mathTransitionTimer);
+  mathTransitionTimer = setTimeout(() => {
+    mathTransitionTimer = null;
+    if (mathSessionFinished) return;
     fb.classList.remove('show');
     mathCurrentIndex++;
     if (mathCurrentIndex < mathQuestions.length) {
@@ -3624,28 +3628,24 @@ function submitMathAnswer() {
     } else {
       const bar = document.getElementById('math-progress-bar');
       bar.style.width = '100%';
-      setTimeout(() => showMathResult(), 400);
+      mathTransitionTimer = setTimeout(() => {
+        mathTransitionTimer = null;
+        if (mathSessionFinished) return;
+        showMathResult();
+      }, 400);
     }
   }, 1200);
 }
 
-function skipMathQuestion() {
-  if (mathAnswered) return;
-  SoundFx.playTap();
-  const acc = accounts[currentAccountId];
-  const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
-  if (typeof generateMathQuiz === 'function') {
-    const newProblems = generateMathQuiz(grade, 1, 'normal');
-    if (newProblems && newProblems.length > 0) {
-      mathQuestions.splice(mathCurrentIndex, 1, newProblems[0]);
-    }
+function showMathResult(totalOverride) {
+  if (mathSessionFinished) return;
+  mathSessionFinished = true;
+  if (mathTransitionTimer) {
+    clearTimeout(mathTransitionTimer);
+    mathTransitionTimer = null;
   }
-  renderMathQuestion();
-}
-
-function showMathResult() {
-  const total = mathQuestions.length;
-  const pct = Math.round((mathScore / total) * 100);
+  const total = Math.max(mathScore, totalOverride !== undefined ? totalOverride : mathQuestions.length);
+  const pct = total > 0 ? Math.round((mathScore / total) * 100) : 0;
 
   document.getElementById('math-result-correct').textContent = mathScore;
   document.getElementById('math-result-total').textContent = total;
@@ -3777,6 +3777,8 @@ let typingMaxCombo = 0;
 let typingStartTime = 0;
 let typingSessionPoints = 0;
 let isTypingInputBlocked = false;
+let typingSessionFinished = false;
+let typingTransitionTimer = null;
 
 // タイムアタック用変数
 let typingTimerInterval = null;   // setInterval ID
@@ -3880,7 +3882,10 @@ function onTimeUp() {
       `;
       fb.classList.add('show');
     }
-    setTimeout(() => {
+    if (typingTransitionTimer) clearTimeout(typingTransitionTimer);
+    typingTransitionTimer = setTimeout(() => {
+      typingTransitionTimer = null;
+      if (typingSessionFinished) return;
       fb && fb.classList.remove('show');
       finishTypingQuiz();
     }, 1800);
@@ -3895,7 +3900,10 @@ function onTimeUp() {
       `;
       fb.classList.add('show');
     }
-    setTimeout(() => {
+    if (typingTransitionTimer) clearTimeout(typingTransitionTimer);
+    typingTransitionTimer = setTimeout(() => {
+      typingTransitionTimer = null;
+      if (typingSessionFinished) return;
       fb && fb.classList.remove('show');
       typingCurrentIndex++;
       setupTypingQuestion();
@@ -3977,6 +3985,11 @@ function startTypingGame() {
     : shuffled.slice(0, Math.min(8, shuffled.length));
 
   typingCurrentIndex = 0;
+  typingSessionFinished = false;
+  if (typingTransitionTimer) {
+    clearTimeout(typingTransitionTimer);
+    typingTransitionTimer = null;
+  }
   typingTotalKeystrokes = 0;
   typingMissCount = 0;
   typingCurrentCombo = 0;
@@ -4248,7 +4261,10 @@ function handleTypingInput(inputChar) {
         `;
         fb.classList.add('show');
       }
-      setTimeout(() => {
+      if (typingTransitionTimer) clearTimeout(typingTransitionTimer);
+      typingTransitionTimer = setTimeout(() => {
+        typingTransitionTimer = null;
+        if (typingSessionFinished) return;
         fb && fb.classList.remove('show');
         finishTypingQuiz();
       }, 1800);
@@ -4313,7 +4329,10 @@ function handleQuestionComplete() {
     fb.classList.add('show');
   }
 
-  setTimeout(() => {
+  if (typingTransitionTimer) clearTimeout(typingTransitionTimer);
+  typingTransitionTimer = setTimeout(() => {
+    typingTransitionTimer = null;
+    if (typingSessionFinished) return;
     if (fb) fb.classList.remove('show');
     typingCurrentIndex++;
     isTypingInputBlocked = false;
@@ -4336,7 +4355,13 @@ function skipTypingQuestion() {
   setupTypingQuestion();
 }
 
-function finishTypingQuiz() {
+function finishTypingQuiz(totalOverride) {
+  if (typingSessionFinished) return;
+  typingSessionFinished = true;
+  if (typingTransitionTimer) {
+    clearTimeout(typingTransitionTimer);
+    typingTransitionTimer = null;
+  }
   stopQuestionTimer();
   const elapsedSec = Math.max(1, (Date.now() - typingStartTime) / 1000);
   const wpm = Math.round((typingTotalKeystrokes / elapsedSec) * 60);
@@ -4351,17 +4376,22 @@ function finishTypingQuiz() {
   else if (wpm >= 50) rank = 'B';
   else rank = 'C';
 
+  const totalQ = totalOverride !== undefined ? totalOverride : typingQuizList.length;
+
   // 獲得ポイント（難易度コース × 達成ランクの傾斜ポイント設計）
   let basePoints = 0;
   if (typingSelectedCourse === 'insane') {
-    // 激激ムズムズ: 全問ノーミスクリアのみ 1.8pt、失敗は0pt
-    const totalQ = typingQuizList.length;
-    basePoints = (!typingInsaneFailed && typingInsaneTotalScore >= totalQ)
+    // 激激ムズムズ: 全問ノーミスクリアのみ 1.8pt、失敗または途中終了は0pt
+    basePoints = (!typingInsaneFailed && typingInsaneTotalScore >= typingQuizList.length && totalOverride === undefined)
       ? TYPING_POINT_TABLE.insane.CLEAR
       : TYPING_POINT_TABLE.insane.FAIL;
   } else {
-    const courseTable = TYPING_POINT_TABLE[typingSelectedCourse] || TYPING_POINT_TABLE.easy;
-    basePoints = courseTable[rank] || courseTable['C'] || 0;
+    if (totalOverride !== undefined) {
+      basePoints = Math.round(typingSessionPoints * 100) / 100;
+    } else {
+      const courseTable = TYPING_POINT_TABLE[typingSelectedCourse] || TYPING_POINT_TABLE.easy;
+      basePoints = courseTable[rank] || courseTable['C'] || 0;
+    }
   }
 
   // ポイント通帳への加算処理（上限チェック）
@@ -4372,8 +4402,8 @@ function finishTypingQuiz() {
     subjectName: `⌨️ タイピング (${TYPING_WORLDS[typingSelectedWorld].name})`,
     historyTitle: `⌨️ タイピング特訓 (${TYPING_WORLDS[typingSelectedWorld].name} / ${courseName} ランク${rank})`,
     requestedPoints: basePoints,
-    totalQuestions: typingQuizList.length,
-    correctCount: typingQuizList.length
+    totalQuestions: totalQ,
+    correctCount: totalQ
   });
 
   // 結果画面UIの反映
@@ -4642,12 +4672,32 @@ const WritingCanvas = (() => {
   let currentTool = 'pencil'; // 'pencil' | 'redpen' | 'eraser'
   let strokeStartTime = 0;
   let activePointerId = null;
+  let resizeObserver = null;
 
   function init() {
+    if (typeof ResizeObserver !== 'undefined' && !resizeObserver) {
+      resizeObserver = new ResizeObserver((entries) => {
+        entries.forEach(entry => {
+          const target = entry.target;
+          const idx = cells.findIndex(c => c.canvas === target);
+          if (idx !== -1) {
+            const updated = updateCanvasResolution(idx);
+            if (updated) {
+              redrawCell(idx);
+            }
+          }
+        });
+      });
+    }
+
     cells.forEach((cell, idx) => {
       cell.canvas = document.getElementById(`writing-canvas-${cell.id}`);
       if (!cell.canvas) return;
       cell.ctx = cell.canvas.getContext('2d');
+
+      if (resizeObserver && cell.canvas) {
+        try { resizeObserver.observe(cell.canvas); } catch (_) {}
+      }
 
       updateCanvasResolution(idx);
 
@@ -4670,22 +4720,32 @@ const WritingCanvas = (() => {
   function handleResize() {
     cells.forEach((cell, idx) => {
       if (cell.canvas && cell.ctx) {
-        updateCanvasResolution(idx);
-        redrawCell(idx);
+        const updated = updateCanvasResolution(idx);
+        if (updated) {
+          redrawCell(idx);
+        }
       }
     });
   }
 
   function updateCanvasResolution(cellIdx) {
     const cell = cells[cellIdx];
-    if (!cell || !cell.canvas || !cell.ctx) return;
-    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    if (!cell || !cell.canvas || !cell.ctx) return false;
     const rect = cell.canvas.getBoundingClientRect();
-    const size = rect.width > 0 ? rect.width : (cellIdx === 0 ? 300 : 230);
-    cell.canvas.width = Math.round(size * dpr);
-    cell.canvas.height = Math.round(size * dpr);
-    cell.ctx.setTransform(1, 0, 0, 1, 0, 0); // 変形リセット
-    cell.ctx.scale(dpr, dpr);
+    if (rect.width <= 0 || rect.height <= 0) return false;
+
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    const targetW = Math.round(rect.width * dpr);
+    const targetH = Math.round(rect.height * dpr);
+
+    if (cell.canvas.width !== targetW || cell.canvas.height !== targetH) {
+      cell.canvas.width = targetW;
+      cell.canvas.height = targetH;
+      cell.ctx.setTransform(1, 0, 0, 1, 0, 0); // 変形リセット
+      cell.ctx.scale(dpr, dpr);
+      return true;
+    }
+    return false;
   }
 
   function redrawCell(cellIdx) {
@@ -4744,12 +4804,26 @@ const WritingCanvas = (() => {
 
   function handlePointerDown(e, cellIdx) {
     e.preventDefault();
+    const cell = cells[cellIdx];
+    if (!cell || !cell.canvas || !cell.ctx) return;
+
+    // 保険チェック: 描画開始時に内部解像度と表示サイズが一致しているか確認
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    const rect = cell.canvas.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const expectedW = Math.round(rect.width * dpr);
+      const expectedH = Math.round(rect.height * dpr);
+      if (Math.abs(cell.canvas.width - expectedW) > 1 || Math.abs(cell.canvas.height - expectedH) > 1) {
+        updateCanvasResolution(cellIdx);
+        redrawCell(cellIdx);
+      }
+    }
+
     isDrawing = true;
     activeCellIdx = cellIdx;
     activePointerId = e.pointerId;
-    const cell = cells[cellIdx];
 
-    if (cell.canvas && cell.canvas.setPointerCapture) {
+    if (cell.canvas.setPointerCapture) {
       try { cell.canvas.setPointerCapture(e.pointerId); } catch (_) {}
     }
 
@@ -5017,7 +5091,15 @@ function openWritingStart() {
   }
 }
 
+let writingSessionFinished = false;
+let writingTransitionTimer = null;
+
 function startWritingQuiz() {
+  writingSessionFinished = false;
+  if (writingTransitionTimer) {
+    clearTimeout(writingTransitionTimer);
+    writingTransitionTimer = null;
+  }
   SoundFx.playTap();
   const acc = accounts[currentAccountId];
   const grade = getGradeForAccount(acc);
@@ -5186,7 +5268,10 @@ async function checkWritingAnswer() {
   if (isCorrect) {
     SoundFx.playCorrect();
     // 正解時は自動で1.2秒後に次へ
-    setTimeout(() => {
+    if (writingTransitionTimer) clearTimeout(writingTransitionTimer);
+    writingTransitionTimer = setTimeout(() => {
+      writingTransitionTimer = null;
+      if (writingSessionFinished) return;
       handleWritingGrading(true);
     }, 1200);
   } else {
@@ -5195,6 +5280,11 @@ async function checkWritingAnswer() {
 }
 
 function handleWritingGrading(isCorrect) {
+  if (writingSessionFinished) return;
+  if (writingTransitionTimer) {
+    clearTimeout(writingTransitionTimer);
+    writingTransitionTimer = null;
+  }
   const q = writingQuestions[writingCurrentIndex];
   const acc = accounts[currentAccountId];
   const pts = getPointPerQuestion(acc, 'writing');
@@ -5212,26 +5302,23 @@ function handleWritingGrading(isCorrect) {
     renderWritingQuestion();
   } else {
     document.getElementById('writing-quiz-progress-bar').style.width = '100%';
-    setTimeout(() => showWritingResult(), 300);
+    writingTransitionTimer = setTimeout(() => {
+      writingTransitionTimer = null;
+      if (writingSessionFinished) return;
+      showWritingResult();
+    }, 300);
   }
 }
 
-function skipWritingQuestion() {
-  SoundFx.playTap();
-  const acc = accounts[currentAccountId];
-  const grade = acc ? (getGradeForAccount(acc) || 5) : 5;
-  const pool = (typeof WRITING_DATA !== 'undefined' && WRITING_DATA[grade]) ? WRITING_DATA[grade] : [];
-  const unused = pool.filter(item => !writingQuestions.some(q => q.kanji === item.kanji));
-  if (unused.length > 0) {
-    const newQ = { ...shuffle(unused)[0], grade };
-    writingQuestions.splice(writingCurrentIndex, 1, newQ);
+function showWritingResult(totalOverride) {
+  if (writingSessionFinished) return;
+  writingSessionFinished = true;
+  if (writingTransitionTimer) {
+    clearTimeout(writingTransitionTimer);
+    writingTransitionTimer = null;
   }
-  renderWritingQuestion();
-}
-
-function showWritingResult() {
-  const total = writingQuestions.length;
-  const pct = Math.round((writingCorrectCount / total) * 100);
+  const total = Math.max(writingCorrectCount, totalOverride !== undefined ? totalOverride : writingQuestions.length);
+  const pct = total > 0 ? Math.round((writingCorrectCount / total) * 100) : 0;
 
   document.getElementById('writing-result-correct').textContent = writingCorrectCount;
   document.getElementById('writing-result-total').textContent = total;
@@ -5702,14 +5789,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const writingQuizQuit = document.getElementById('btn-writing-quiz-quit');
   if (writingQuizQuit) {
     writingQuizQuit.addEventListener('click', () => {
-      if (confirm('書き取りドリルをとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
-        renderPortalScreen();
+      const answeredCount = writingCurrentIndex;
+      if (answeredCount === 0) {
+        if (confirm('書き取りドリルをやめてポータルにもどる？')) {
+          writingSessionFinished = true;
+          if (writingTransitionTimer) { clearTimeout(writingTransitionTimer); writingTransitionTimer = null; }
+          renderPortalScreen();
+        }
+      } else {
+        if (confirm(`ここまでの ${formatPoints(writingEarnedPoints)}pt をもらって おわる？\n（${answeredCount}問中 ${writingCorrectCount}問せいかい）`)) {
+          if (writingTransitionTimer) { clearTimeout(writingTransitionTimer); writingTransitionTimer = null; }
+          showWritingResult(answeredCount);
+        }
       }
     });
   }
-
-  const writingSkipBtn = document.getElementById('btn-writing-skip');
-  if (writingSkipBtn) writingSkipBtn.addEventListener('click', skipWritingQuestion);
 
   // キャンバスツールボタン
   const toolPencil = document.getElementById('btn-tool-pencil');
@@ -5762,10 +5856,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnWritingHome = document.getElementById('btn-writing-result-home');
   if (btnWritingHome) btnWritingHome.addEventListener('click', renderPortalScreen);
 
-  // 漢字クイズ画面イベント
-  const btnQuizSkip = document.getElementById('btn-quiz-skip');
-  if (btnQuizSkip) btnQuizSkip.addEventListener('click', skipQuizQuestion);
-
   // 漢字スタート画面の戻るボタン（ポータルへ）
   document.getElementById('btn-start-back-portal').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-start').addEventListener('click', () => startQuiz(false));
@@ -5780,15 +5870,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // 算数クエスト画面イベント
   document.getElementById('btn-math-back-portal').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-math-quit').addEventListener('click', () => {
-    if (confirm('算数クエストをとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
-      renderPortalScreen();
+    const answeredCount = mathCurrentIndex + (mathAnswered ? 1 : 0);
+    if (answeredCount === 0) {
+      if (confirm('算数クエストをやめてポータルにもどる？')) {
+        mathSessionFinished = true;
+        if (mathTransitionTimer) { clearTimeout(mathTransitionTimer); mathTransitionTimer = null; }
+        renderPortalScreen();
+      }
+    } else {
+      if (confirm(`ここまでの ${formatPoints(mathSessionEarnedPoints)}pt をもらって おわる？\n（${answeredCount}問中 ${mathScore}問せいかい）`)) {
+        if (mathTransitionTimer) { clearTimeout(mathTransitionTimer); mathTransitionTimer = null; }
+        showMathResult(answeredCount);
+      }
     }
   });
   document.getElementById('btn-math-home').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-math-retry').addEventListener('click', startMathQuiz);
   document.getElementById('btn-math-start-run').addEventListener('click', startMathQuiz);
-  const btnMathSkip = document.getElementById('btn-math-skip');
-  if (btnMathSkip) btnMathSkip.addEventListener('click', skipMathQuestion);
   document.getElementById('btn-open-wallet-math').addEventListener('click', () => {
     openWalletScreen(currentAccountId);
   });
@@ -5822,10 +5920,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // ⌨️ タイピング画面イベント
   document.getElementById('btn-typing-back-portal').addEventListener('click', renderPortalScreen);
   document.getElementById('btn-typing-quit').addEventListener('click', () => {
-    if (confirm('タイピング特訓をとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
-      stopQuestionTimer();
-      isTypingInputBlocked = false;
-      renderPortalScreen();
+    stopQuestionTimer();
+    const answeredCount = typingCurrentIndex + (isTypingInputBlocked && typingCurrentIndex < typingQuizList.length ? 1 : 0);
+    if (answeredCount === 0) {
+      if (confirm('タイピング特訓をやめてポータルにもどる？')) {
+        typingSessionFinished = true;
+        if (typingTransitionTimer) { clearTimeout(typingTransitionTimer); typingTransitionTimer = null; }
+        isTypingInputBlocked = false;
+        renderPortalScreen();
+      } else {
+        if (TYPING_TIME_PER_CHAR[typingSelectedCourse] > 0 && typingQuizList[typingCurrentIndex]) {
+          startQuestionTimer(calcQuestionTime(typingQuizList[typingCurrentIndex].kana, typingSelectedCourse));
+        }
+      }
+    } else {
+      if (confirm(`ここまでの ${formatPoints(typingSessionPoints)}pt をもらって おわる？\n（${answeredCount}問クリア）`)) {
+        if (typingTransitionTimer) { clearTimeout(typingTransitionTimer); typingTransitionTimer = null; }
+        isTypingInputBlocked = true;
+        finishTypingQuiz(answeredCount);
+      } else {
+        if (TYPING_TIME_PER_CHAR[typingSelectedCourse] > 0 && typingQuizList[typingCurrentIndex]) {
+          startQuestionTimer(calcQuestionTime(typingQuizList[typingCurrentIndex].kana, typingSelectedCourse));
+        }
+      }
     }
   });
   document.getElementById('btn-typing-home').addEventListener('click', renderPortalScreen);
@@ -6004,12 +6121,23 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('screen-account');
   });
   document.getElementById('btn-quit').addEventListener('click', () => {
-    if (confirm('漢字クイズをとちゅうでやめてポータルにもどる？\n（とちゅうまでのポイントは保存されません）')) {
-      updateStartScreenWeakBanner();
-      if (currentAccountId !== null) {
-        renderPortalScreen();
-      } else {
-        showScreen('screen-account');
+    const answeredCount = currentIndex + (answered ? 1 : 0);
+    if (answeredCount === 0) {
+      if (confirm('漢字クイズをやめてポータルにもどる？')) {
+        quizSessionFinished = true;
+        if (quizTransitionTimer) { clearTimeout(quizTransitionTimer); quizTransitionTimer = null; }
+        updateStartScreenWeakBanner();
+        if (currentAccountId !== null) {
+          renderPortalScreen();
+        } else {
+          showScreen('screen-account');
+        }
+      }
+    } else {
+      if (confirm(`ここまでの ${formatPoints(sessionEarnedPoints)}pt をもらって おわる？\n（${answeredCount}問中 ${score}問せいかい）`)) {
+        if (quizTransitionTimer) { clearTimeout(quizTransitionTimer); quizTransitionTimer = null; }
+        updateStartScreenWeakBanner();
+        showResult(answeredCount);
       }
     }
   });
