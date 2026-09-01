@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v31)
+//  🌸 APP VERSION DEFINITION (v32)
 // =============================================
-const APP_VERSION_CODE = 'v31';
-const APP_VERSION_LABEL = '🌸 ばーじょん31 🌸';
+const APP_VERSION_CODE = 'v32';
+const APP_VERSION_LABEL = '🌸 ばーじょん32 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -4674,6 +4674,27 @@ const WritingCanvas = (() => {
   let activePointerId = null;
   let resizeObserver = null;
 
+  // 一時的なペン入力デバッグ統計（原因調査用・特定後に削除予定）
+  let debugPointerStats = { down: 0, move: 0, up: 0, cancel: 0 };
+
+  function updateDebugPointerDisplay() {
+    let el = document.getElementById('writing-pointer-debug');
+    if (!el) {
+      const container = document.getElementById('writing-canvas-container');
+      if (!container || !container.parentNode) return;
+      el = document.createElement('div');
+      el.id = 'writing-pointer-debug';
+      el.style.cssText = 'font-size: 11px; color: #64748b; text-align: center; margin: 2px 0 6px 0; font-family: monospace; user-select: none; pointer-events: none;';
+      container.parentNode.insertBefore(el, container);
+    }
+    el.textContent = `down: ${debugPointerStats.down} | move: ${debugPointerStats.move} | up: ${debugPointerStats.up} | cancel: ${debugPointerStats.cancel}`;
+  }
+
+  function resetDebugPointerStats() {
+    debugPointerStats = { down: 0, move: 0, up: 0, cancel: 0 };
+    updateDebugPointerDisplay();
+  }
+
   function init() {
     if (typeof ResizeObserver !== 'undefined' && !resizeObserver) {
       resizeObserver = new ResizeObserver((entries) => {
@@ -4705,7 +4726,7 @@ const WritingCanvas = (() => {
       cell.canvas.onpointerdown = (e) => handlePointerDown(e, idx);
       cell.canvas.onpointermove = (e) => handlePointerMove(e, idx);
       cell.canvas.onpointerup = (e) => handlePointerUp(e, idx);
-      cell.canvas.onpointercancel = (e) => handlePointerUp(e, idx);
+      cell.canvas.onpointercancel = (e) => handlePointerCancel(e, idx);
     });
 
     // 画面回転・リサイズ監視
@@ -4715,6 +4736,8 @@ const WritingCanvas = (() => {
       window.addEventListener('resize', handleResize);
       window.addEventListener('orientationchange', handleResize);
     }
+
+    resetDebugPointerStats();
   }
 
   function handleResize() {
@@ -4803,6 +4826,9 @@ const WritingCanvas = (() => {
   }
 
   function handlePointerDown(e, cellIdx) {
+    debugPointerStats.down++;
+    updateDebugPointerDisplay();
+
     e.preventDefault();
     const cell = cells[cellIdx];
     if (!cell || !cell.canvas || !cell.ctx) return;
@@ -4841,6 +4867,9 @@ const WritingCanvas = (() => {
   }
 
   function handlePointerMove(e, cellIdx) {
+    debugPointerStats.move++;
+    updateDebugPointerDisplay();
+
     if (!isDrawing || activeCellIdx !== cellIdx) return;
     e.preventDefault();
 
@@ -4887,9 +4916,9 @@ const WritingCanvas = (() => {
     ctx.restore();
   }
 
-  function handlePointerUp(e, cellIdx) {
+  function finishStroke(e, cellIdx) {
     if (!isDrawing) return;
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     isDrawing = false;
     const cell = cells[cellIdx];
 
@@ -4903,6 +4932,18 @@ const WritingCanvas = (() => {
       undoActionStack.push({ type: 'stroke', cellIdx });
       cell.currentStroke = null;
     }
+  }
+
+  function handlePointerUp(e, cellIdx) {
+    debugPointerStats.up++;
+    updateDebugPointerDisplay();
+    finishStroke(e, cellIdx);
+  }
+
+  function handlePointerCancel(e, cellIdx) {
+    debugPointerStats.cancel++;
+    updateDebugPointerDisplay();
+    finishStroke(e, cellIdx);
   }
 
   function getPos(e, targetCanvas) {
@@ -4974,6 +5015,7 @@ const WritingCanvas = (() => {
       }
     });
     setTool('pencil');
+    resetDebugPointerStats();
   }
 
   function getStrokes(cellIdx) {
