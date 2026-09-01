@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v32)
+//  🌸 APP VERSION DEFINITION (v33)
 // =============================================
-const APP_VERSION_CODE = 'v32';
-const APP_VERSION_LABEL = '🌸 ばーじょん32 🌸';
+const APP_VERSION_CODE = 'v33';
+const APP_VERSION_LABEL = '🌸 ばーじょん33 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -4674,8 +4674,37 @@ const WritingCanvas = (() => {
   let activePointerId = null;
   let resizeObserver = null;
 
-  // 一時的なペン入力デバッグ統計（原因調査用・特定後に削除予定）
+  // 一時的なペン入力デバッグ統計 ＆ イベントシーケンス記録（原因調査用・特定後に削除予定）
   let debugPointerStats = { down: 0, move: 0, up: 0, cancel: 0 };
+  let debugPointerEvents = [];
+
+  function recordDebugEvent(char) {
+    debugPointerEvents.push(char);
+    if (debugPointerEvents.length > 40) {
+      debugPointerEvents.shift();
+    }
+  }
+
+  function formatDebugEvents(events) {
+    if (!events || events.length === 0) return '-';
+    let result = '';
+    let i = 0;
+    while (i < events.length) {
+      const c = events[i];
+      if (c === 'm' || c === 'x') {
+        let count = 0;
+        while (i < events.length && events[i] === c) {
+          count++;
+          i++;
+        }
+        result += (count > 1) ? (c + count) : c;
+      } else {
+        result += c;
+        i++;
+      }
+    }
+    return result;
+  }
 
   function updateDebugPointerDisplay() {
     let el = document.getElementById('writing-pointer-debug');
@@ -4684,14 +4713,16 @@ const WritingCanvas = (() => {
       if (!container || !container.parentNode) return;
       el = document.createElement('div');
       el.id = 'writing-pointer-debug';
-      el.style.cssText = 'font-size: 11px; color: #64748b; text-align: center; margin: 2px 0 6px 0; font-family: monospace; user-select: none; pointer-events: none;';
+      el.style.cssText = 'font-size: 11px; color: #64748b; text-align: center; margin: 2px 0 6px 0; font-family: monospace; user-select: none; pointer-events: none; max-width: 320px; word-break: break-all; line-height: 1.3;';
       container.parentNode.insertBefore(el, container);
     }
-    el.textContent = `down: ${debugPointerStats.down} | move: ${debugPointerStats.move} | up: ${debugPointerStats.up} | cancel: ${debugPointerStats.cancel}`;
+    const formattedEvents = formatDebugEvents(debugPointerEvents);
+    el.innerHTML = `<div>down: ${debugPointerStats.down} | move: ${debugPointerStats.move} | up: ${debugPointerStats.up} | cancel: ${debugPointerStats.cancel}</div><div style="font-size: 10px; color: #475569; margin-top: 1px; word-break: break-all;">log: ${formattedEvents}</div>`;
   }
 
   function resetDebugPointerStats() {
     debugPointerStats = { down: 0, move: 0, up: 0, cancel: 0 };
+    debugPointerEvents = [];
     updateDebugPointerDisplay();
   }
 
@@ -4827,11 +4858,14 @@ const WritingCanvas = (() => {
 
   function handlePointerDown(e, cellIdx) {
     debugPointerStats.down++;
-    updateDebugPointerDisplay();
 
     e.preventDefault();
     const cell = cells[cellIdx];
-    if (!cell || !cell.canvas || !cell.ctx) return;
+    if (!cell || !cell.canvas || !cell.ctx) {
+      recordDebugEvent('d');
+      updateDebugPointerDisplay();
+      return;
+    }
 
     // 保険チェック: 描画開始時に内部解像度と表示サイズが一致しているか確認
     const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
@@ -4864,13 +4898,19 @@ const WritingCanvas = (() => {
     };
 
     drawStrokeSegment(cell.ctx, currentTool, pos, pos, pVal);
+
+    recordDebugEvent('D');
+    updateDebugPointerDisplay();
   }
 
   function handlePointerMove(e, cellIdx) {
     debugPointerStats.move++;
-    updateDebugPointerDisplay();
 
-    if (!isDrawing || activeCellIdx !== cellIdx) return;
+    if (!isDrawing || activeCellIdx !== cellIdx) {
+      recordDebugEvent('x');
+      updateDebugPointerDisplay();
+      return;
+    }
     e.preventDefault();
 
     const cell = cells[cellIdx];
@@ -4886,7 +4926,11 @@ const WritingCanvas = (() => {
       cell.currentStroke.apiStroke[2].push(elapsed);
 
       drawStrokeSegment(cell.ctx, cell.currentStroke.tool, lastPt, pos, pVal);
+      recordDebugEvent('m');
+    } else {
+      recordDebugEvent('x');
     }
+    updateDebugPointerDisplay();
   }
 
   function drawStrokeSegment(ctx, tool, p0, p1, pressure) {
@@ -4917,7 +4961,7 @@ const WritingCanvas = (() => {
   }
 
   function finishStroke(e, cellIdx) {
-    if (!isDrawing) return;
+    if (!isDrawing) return false;
     if (e && e.preventDefault) e.preventDefault();
     isDrawing = false;
     const cell = cells[cellIdx];
@@ -4931,19 +4975,23 @@ const WritingCanvas = (() => {
       cell.strokes.push(cell.currentStroke);
       undoActionStack.push({ type: 'stroke', cellIdx });
       cell.currentStroke = null;
+      return true;
     }
+    return false;
   }
 
   function handlePointerUp(e, cellIdx) {
     debugPointerStats.up++;
+    const saved = finishStroke(e, cellIdx);
+    recordDebugEvent(saved ? 'U' : 'u');
     updateDebugPointerDisplay();
-    finishStroke(e, cellIdx);
   }
 
   function handlePointerCancel(e, cellIdx) {
     debugPointerStats.cancel++;
-    updateDebugPointerDisplay();
     finishStroke(e, cellIdx);
+    recordDebugEvent('C');
+    updateDebugPointerDisplay();
   }
 
   function getPos(e, targetCanvas) {
