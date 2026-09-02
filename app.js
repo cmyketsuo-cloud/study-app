@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v39)
+//  🌸 APP VERSION DEFINITION (v40)
 // =============================================
-const APP_VERSION_CODE = 'v39';
-const APP_VERSION_LABEL = '🌸 ばーじょん39 🌸';
+const APP_VERSION_CODE = 'v40';
+const APP_VERSION_LABEL = '🌸 ばーじょん40 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -3001,8 +3001,10 @@ function renderQuestion() {
   const isKana = (quizMode !== 'kanji');
 
   if (isKana) {
-    // E-3: かなモード（単漢字モードの見た目、固定文言、ルビなし、exヒント非表示）
-    qLabel.innerHTML = 'この もじは なんと よむ？';
+    // E-3, E-9: かなモード（単漢字モードの見た目、モード別文言、ルビなし、exヒント非表示）
+    qLabel.innerHTML = (quizMode === 'kana_hiragana')
+      ? 'この もじを カタカナで かくと？'
+      : 'この もじは なんと よむ？';
     kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-single';
     kanjiCharEl.innerHTML = `<span class="single-kanji serif-text">${text}</span>`;
     document.getElementById('example-sentence').innerHTML = '';
@@ -3083,10 +3085,13 @@ function handleChoice(btn, choice, q) {
     record.lastAnswered = Date.now();
 
     if (isKana) {
-      // E-4: かなモード正解時の語例表示（ex があれば表示、空文字なら通常表示）
+      // E-4, E-9: かなモード正解時の語例表示（ex があれば表示、空文字なら通常表示）
       let exText = '';
       if (q.ex && q.ex.trim() !== '') {
-        exText = `<small style="font-size:1.05rem;background:#ffffff;padding:0.3rem 0.8rem;border-radius:20px;border:3px solid #10b981;color:#065f46;display:inline-block;margin-top:0.5rem;line-height:1.4;box-shadow:0 4px 10px rgba(0,0,0,0.1);">せいかい！ ${q.question} は「${q.ex}」の ${q.question} だよ</small>`;
+        const msg = (quizMode === 'kana_hiragana')
+          ? `せいかい！ ${q.question} は カタカナで ${q.correct}。「${q.ex}」の ${q.correct} だよ`
+          : `せいかい！ ${q.question} は「${q.ex}」の ${q.question} だよ`;
+        exText = `<small style="font-size:1.05rem;background:#ffffff;padding:0.3rem 0.8rem;border-radius:20px;border:3px solid #10b981;color:#065f46;display:inline-block;margin-top:0.5rem;line-height:1.4;box-shadow:0 4px 10px rgba(0,0,0,0.1);">${msg}</small>`;
       } else {
         exText = `<small style="font-size:1.3rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #f59e0b;color:#b45309;display:inline-block;margin-top:0.3rem;">+${ptInfo.total}pt</small>`;
       }
