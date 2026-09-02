@@ -1274,11 +1274,13 @@ body {
   letter-spacing: 0.04em;
 }
 
-.choice-btn:hover:not(:disabled) {
-  border-color: var(--color-primary);
-  background: #faf5ff;
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 24px rgba(139, 92, 246, 0.18);
+@media (hover: hover) and (pointer: fine) {
+  .choice-btn:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: #faf5ff;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(139, 92, 246, 0.18);
+  }
 }
 
 .choice-btn:active:not(:disabled) {
