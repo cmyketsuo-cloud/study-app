@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v33)
+//  🌸 APP VERSION DEFINITION (v34)
 // =============================================
-const APP_VERSION_CODE = 'v33';
-const APP_VERSION_LABEL = '🌸 ばーじょん33 🌸';
+const APP_VERSION_CODE = 'v34';
+const APP_VERSION_LABEL = '🌸 ばーじょん34 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -4726,6 +4726,13 @@ const WritingCanvas = (() => {
     updateDebugPointerDisplay();
   }
 
+  // iPadOS スクリブル対策：touchmove のデフォルト動作を抑止してペンの横取り（文字入力判定）を防ぐ回避策
+  function handleTouchMovePrevent(e) {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+  }
+
   function init() {
     if (typeof ResizeObserver !== 'undefined' && !resizeObserver) {
       resizeObserver = new ResizeObserver((entries) => {
@@ -4758,6 +4765,10 @@ const WritingCanvas = (() => {
       cell.canvas.onpointermove = (e) => handlePointerMove(e, idx);
       cell.canvas.onpointerup = (e) => handlePointerUp(e, idx);
       cell.canvas.onpointercancel = (e) => handlePointerCancel(e, idx);
+
+      // iPadOS スクリブル回避策：touchmove を preventDefault してペン入力横取りを抑制（passive: false、重複防止）
+      cell.canvas.removeEventListener('touchmove', handleTouchMovePrevent);
+      cell.canvas.addEventListener('touchmove', handleTouchMovePrevent, { passive: false });
     });
 
     // 画面回転・リサイズ監視
