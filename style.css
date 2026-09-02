@@ -294,9 +294,11 @@ body {
   border-top-color: var(--card-accent, var(--color-primary));
 }
 
-.account-card.filled:hover {
-  transform: translateY(-8px) scale(1.03);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.1), 0 0 0 3px var(--card-accent, var(--color-primary));
+@media (hover: hover) and (pointer: fine) {
+  .account-card.filled:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.1), 0 0 0 3px var(--card-accent, var(--color-primary));
+  }
 }
 
 .account-card.filled:active {
@@ -308,11 +310,13 @@ body {
   background: rgba(255, 255, 255, 0.6);
 }
 
-.account-card.empty:hover {
-  border-color: var(--color-primary);
-  background: rgba(255, 255, 255, 0.95);
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-pop);
+@media (hover: hover) and (pointer: fine) {
+  .account-card.empty:hover {
+    border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-pop);
+  }
 }
 
 .account-add-icon {
@@ -323,8 +327,10 @@ body {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.account-card.empty:hover .account-add-icon {
-  transform: scale(1.25) rotate(90deg);
+@media (hover: hover) and (pointer: fine) {
+  .account-card.empty:hover .account-add-icon {
+    transform: scale(1.25) rotate(90deg);
+  }
 }
 
 .account-add-label {
@@ -356,8 +362,10 @@ body {
   transition: transform 0.25s ease;
 }
 
-.account-card.filled:hover .account-avatar {
-  transform: scale(1.1) rotate(5deg);
+@media (hover: hover) and (pointer: fine) {
+  .account-card.filled:hover .account-avatar {
+    transform: scale(1.1) rotate(5deg);
+  }
 }
 
 .account-name {
@@ -429,12 +437,14 @@ body {
   transition: all 0.25s ease;
 }
 
-.account-settings-btn:hover {
-  background: #ffffff;
-  color: var(--color-primary);
-  border-color: var(--color-primary-light);
-  transform: rotate(60deg) scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .account-settings-btn:hover {
+    background: #ffffff;
+    color: var(--color-primary);
+    border-color: var(--color-primary-light);
+    transform: rotate(60deg) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .pop-bottom-note {
@@ -471,9 +481,11 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.cute-version-badge:hover {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 4px 12px rgba(219, 39, 119, 0.2);
+@media (hover: hover) and (pointer: fine) {
+  .cute-version-badge:hover {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 4px 12px rgba(219, 39, 119, 0.2);
+  }
 }
 
 .portal-footer {
@@ -508,10 +520,12 @@ body {
   user-select: none;
 }
 
-.btn-sound-toggle:hover {
-  transform: scale(1.12);
-  border-color: var(--color-primary-light);
-  box-shadow: 0 6px 18px rgba(255, 107, 107, 0.2);
+@media (hover: hover) and (pointer: fine) {
+  .btn-sound-toggle:hover {
+    transform: scale(1.12);
+    border-color: var(--color-primary-light);
+    box-shadow: 0 6px 18px rgba(255, 107, 107, 0.2);
+  }
 }
 
 .btn-sound-toggle:active {
@@ -575,10 +589,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-back:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  transform: translateX(-3px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-back:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateX(-3px);
+  }
 }
 
 .settings-card {
@@ -714,9 +730,11 @@ body {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.btn-pop-primary:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 28px var(--color-primary-glow);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-primary:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 12px 28px var(--color-primary-glow);
+  }
 }
 
 .btn-pop-primary:active {
@@ -742,10 +760,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-secondary:hover {
-  border-color: var(--color-primary-light);
-  color: var(--color-primary);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-secondary:hover {
+    border-color: var(--color-primary-light);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
 }
 
 .btn-pop-outline {
@@ -766,10 +786,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-outline:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-outline:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    transform: translateY(-1px);
+  }
 }
 
 .btn-pop-danger {
@@ -790,10 +812,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-danger:hover {
-  background: #ffe4e6;
-  border-color: #fda4af;
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-danger:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+    transform: translateY(-1px);
+  }
 }
 
 /* 苦手特訓ボタン */
@@ -823,8 +847,10 @@ body {
   50%      { transform: scale(1.02); box-shadow: 0 12px 30px rgba(255, 75, 114, 0.4); }
 }
 
-.btn-pop-weak:hover {
-  transform: translateY(-3px) scale(1.03);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-weak:hover {
+    transform: translateY(-3px) scale(1.03);
+  }
 }
 
 /* =============================================
@@ -957,10 +983,12 @@ body {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.mode-btn.pop-btn:hover {
-  border-color: var(--color-primary-light);
-  color: var(--color-primary);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .mode-btn.pop-btn:hover {
+    border-color: var(--color-primary-light);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
 }
 
 .mode-btn.pop-btn.active {
@@ -1032,10 +1060,12 @@ body {
   white-space: nowrap;
 }
 
-.btn-quit:hover {
-  background: #fff1f2;
-  border-color: #fda4af;
-  color: #e11d48;
+@media (hover: hover) and (pointer: fine) {
+  .btn-quit:hover {
+    background: #fff1f2;
+    border-color: #fda4af;
+    color: #e11d48;
+  }
 }
 
 .progress-wrap { text-align: center; }
@@ -1627,10 +1657,12 @@ body {
   white-space: nowrap;
 }
 
-.btn-wallet-open:hover {
-  background: #fef3c7;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.25);
+@media (hover: hover) and (pointer: fine) {
+  .btn-wallet-open:hover {
+    background: #fef3c7;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.25);
+  }
 }
 
 .btn-wallet-open.full-width {
@@ -1953,9 +1985,11 @@ body {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.btn-pop-books:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.4);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-books:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 24px rgba(16, 185, 129, 0.4);
+  }
 }
 
 .btn-pop-link-books {
@@ -1976,10 +2010,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-link-books:hover {
-  background: #ecfdf5;
-  transform: translateY(-2px);
-  color: #047857;
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-link-books:hover {
+    background: #ecfdf5;
+    transform: translateY(-2px);
+    color: #047857;
+  }
 }
 
 .book-stock-box {
@@ -2041,10 +2077,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-cash:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-cash:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
 }
 
 /* History Section */
@@ -2133,8 +2171,10 @@ body {
   transition: color 0.2s ease;
 }
 
-.btn-parent-toggle:hover {
-  color: var(--color-text);
+@media (hover: hover) and (pointer: fine) {
+  .btn-parent-toggle:hover {
+    color: var(--color-text);
+  }
 }
 
 .parent-panel {
@@ -2170,10 +2210,12 @@ body {
   text-align: left;
 }
 
-.btn-pop-small-admin:hover {
-  background: #f8fafc;
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-small-admin:hover {
+    background: #f8fafc;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
 }
 
 .btn-pop-small-admin.outline {
@@ -2230,8 +2272,10 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-small-ghost:hover {
-  background: #e2e8f0;
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-small-ghost:hover {
+    background: #e2e8f0;
+  }
 }
 
 .portal-account-badge {
@@ -2381,9 +2425,11 @@ body {
   overflow: hidden;
 }
 
-.subject-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+@media (hover: hover) and (pointer: fine) {
+  .subject-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .subject-card.subject-kanji {
@@ -2564,9 +2610,11 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-small-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px var(--color-primary-glow);
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-small-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px var(--color-primary-glow);
+  }
 }
 
 .btn-pop-ghost {
@@ -2688,8 +2736,10 @@ body {
   transition: color 0.2s ease;
 }
 
-.btn-icon-danger:hover {
-  color: #e11d48;
+@media (hover: hover) and (pointer: fine) {
+  .btn-icon-danger:hover {
+    color: #e11d48;
+  }
 }
 
 /* Progress in card */
@@ -2739,8 +2789,10 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-link-small:hover {
-  background: #ecfdf5;
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-link-small:hover {
+    background: #ecfdf5;
+  }
 }
 
 .btn-pop-bought {
@@ -2992,10 +3044,12 @@ body {
   justify-content: center;
 }
 
-.pin-key-btn:hover {
-  background: #f8fafc;
-  border-color: var(--color-primary-light);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .pin-key-btn:hover {
+    background: #f8fafc;
+    border-color: var(--color-primary-light);
+    transform: translateY(-2px);
+  }
 }
 
 .pin-key-btn:active {
@@ -3263,8 +3317,10 @@ body {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
 }
-.btn-math-theme:hover {
-  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .btn-math-theme:hover {
+    box-shadow: 0 12px 28px rgba(16, 185, 129, 0.45);
+  }
 }
 
 .math-overview-card {
@@ -3300,10 +3356,12 @@ body {
   line-height: 1.4;
 }
 
-.mode-btn.pop-btn.math-mode-btn:hover {
-  border-color: #34d399;
-  color: #059669;
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .mode-btn.pop-btn.math-mode-btn:hover {
+    border-color: #34d399;
+    color: #059669;
+    transform: translateY(-2px);
+  }
 }
 
 .mode-btn.pop-btn.math-mode-btn.active {
@@ -3657,8 +3715,10 @@ body {
   background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
   box-shadow: 0 8px 24px rgba(244, 63, 94, 0.35);
 }
-.btn-typing-theme:hover {
-  box-shadow: 0 12px 28px rgba(244, 63, 94, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .btn-typing-theme:hover {
+    box-shadow: 0 12px 28px rgba(244, 63, 94, 0.45);
+  }
 }
 
 /* ワールド選択タブ */
@@ -3689,9 +3749,11 @@ body {
   gap: 0.3rem;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.world-tab-btn:hover {
-  transform: translateY(-2px);
-  border-color: #cbd5e1;
+@media (hover: hover) and (pointer: fine) {
+  .world-tab-btn:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+  }
 }
 .world-tab-btn.active {
   border-color: #f43f5e;
@@ -3743,10 +3805,12 @@ body {
   line-height: 1.4;
 }
 
-.mode-btn.pop-btn.typing-course-btn:hover {
-  border-color: #fb7185;
-  color: #e11d48;
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .mode-btn.pop-btn.typing-course-btn:hover {
+    border-color: #fb7185;
+    color: #e11d48;
+    transform: translateY(-2px);
+  }
 }
 
 .mode-btn.pop-btn.typing-course-btn.active {
@@ -3782,10 +3846,17 @@ body {
   font-weight: 900 !important;
   animation: insanePulse 1.5s ease-in-out infinite;
 }
-.btn-insane:hover, .btn-insane.active {
+.btn-insane.active {
   background: linear-gradient(135deg, #b91c1c, #6d28d9) !important;
   transform: translateY(-2px) scale(1.06) !important;
   box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-insane:hover {
+    background: linear-gradient(135deg, #b91c1c, #6d28d9) !important;
+    transform: translateY(-2px) scale(1.06) !important;
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4) !important;
+  }
 }
 @keyframes insanePulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.3); }
@@ -4272,11 +4343,13 @@ body {
   transition: all 0.2s ease;
   z-index: 2;
 }
-.settings-avatar-edit-btn:hover {
-  background: var(--color-primary, #8b5cf6);
-  border-color: var(--color-primary, #8b5cf6);
-  color: #fff;
-  transform: scale(1.15);
+@media (hover: hover) and (pointer: fine) {
+  .settings-avatar-edit-btn:hover {
+    background: var(--color-primary, #8b5cf6);
+    border-color: var(--color-primary, #8b5cf6);
+    color: #fff;
+    transform: scale(1.15);
+  }
 }
 
 /* --- Color Palette --- */
@@ -4296,9 +4369,11 @@ body {
   position: relative;
   outline: none;
 }
-.color-swatch:hover {
-  transform: scale(1.18);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+@media (hover: hover) and (pointer: fine) {
+  .color-swatch:hover {
+    transform: scale(1.18);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  }
 }
 .color-swatch.selected {
   border-color: #ffffff;
@@ -4341,10 +4416,12 @@ body {
   transition: all 0.2s ease;
   outline: none;
 }
-.avatar-emoji-btn:hover {
-  background: #f1f5f9;
-  transform: scale(1.12);
-  border-color: #cbd5e1;
+@media (hover: hover) and (pointer: fine) {
+  .avatar-emoji-btn:hover {
+    background: #f1f5f9;
+    transform: scale(1.12);
+    border-color: #cbd5e1;
+  }
 }
 .avatar-emoji-btn.selected {
   border-color: var(--color-primary, #8b5cf6);
@@ -4372,11 +4449,13 @@ body {
   transition: all 0.2s ease;
   margin-top: 0.25rem;
 }
-.btn-avatar-photo-label:hover {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-  border-color: #38bdf8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+@media (hover: hover) and (pointer: fine) {
+  .btn-avatar-photo-label:hover {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border-color: #38bdf8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+  }
 }
 
 /* --- Delete Photo Button --- */
@@ -4398,9 +4477,11 @@ body {
   transition: all 0.2s ease;
   margin-top: 0.4rem;
 }
-.btn-avatar-photo-clear:hover {
-  background: #ffe4e6;
-  border-color: #fb7185;
+@media (hover: hover) and (pointer: fine) {
+  .btn-avatar-photo-clear:hover {
+    background: #ffe4e6;
+    border-color: #fb7185;
+  }
 }
 
 /* --- Account Card Photo Avatar --- */
@@ -4534,10 +4615,12 @@ body {
   color: var(--color-text);
 }
 
-.btn-confirm-no:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-confirm-no:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+  }
 }
 
 /* =============================================
@@ -4562,11 +4645,13 @@ body {
   user-select: none;
 }
 
-.btn-guide-pill:hover {
-  transform: translateY(-2px) scale(1.05);
-  border-color: #c084fc;
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.25);
-  background: linear-gradient(135deg, #fae8ff 0%, #ddd6fe 100%);
+@media (hover: hover) and (pointer: fine) {
+  .btn-guide-pill:hover {
+    transform: translateY(-2px) scale(1.05);
+    border-color: #c084fc;
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.25);
+    background: linear-gradient(135deg, #fae8ff 0%, #ddd6fe 100%);
+  }
 }
 
 .guide-pill-icon {
@@ -4589,10 +4674,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-pop-small-guide:hover {
-  background: #fce7f3;
-  transform: translateY(-1px);
-  border-color: #f472b6;
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-small-guide:hover {
+    background: #fce7f3;
+    transform: translateY(-1px);
+    border-color: #f472b6;
+  }
 }
 
 .guide-modal-card {
@@ -4626,10 +4713,12 @@ body {
   z-index: 10;
 }
 
-.guide-close-btn:hover {
-  background: #e2e8f0;
-  color: #1e293b;
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .guide-close-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+    transform: scale(1.08);
+  }
 }
 
 .guide-modal-body {
@@ -4706,10 +4795,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.btn-guide-voice:hover {
-  background: #e2e8f0;
-  border-color: #94a3b8;
-  transform: scale(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .btn-guide-voice:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    transform: scale(1.05);
+  }
 }
 
 .btn-guide-voice.speaking {
@@ -4872,9 +4963,11 @@ body {
   box-shadow: 0 8px 24px rgba(234, 179, 8, 0.12);
 }
 
-.subject-card.subject-writing:hover {
-  border-color: #fde047;
-  box-shadow: 0 16px 36px rgba(234, 179, 8, 0.22);
+@media (hover: hover) and (pointer: fine) {
+  .subject-card.subject-writing:hover {
+    border-color: #fde047;
+    box-shadow: 0 16px 36px rgba(234, 179, 8, 0.22);
+  }
 }
 
 .subject-badge.writing {
@@ -4887,9 +4980,11 @@ body {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
   box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35) !important;
 }
-.btn-writing-theme:hover {
-  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45) !important;
-  transform: translateY(-2px) scale(1.02);
+@media (hover: hover) and (pointer: fine) {
+  .btn-writing-theme:hover {
+    box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45) !important;
+    transform: translateY(-2px) scale(1.02);
+  }
 }
 
 /* Start Screen */
@@ -5109,9 +5204,11 @@ body {
   user-select: none;
 }
 
-.canvas-tool-btn:hover, .canvas-action-btn:hover {
-  background: #f1f5f9;
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .canvas-tool-btn:hover, .canvas-action-btn:hover {
+    background: #f1f5f9;
+    transform: translateY(-1px);
+  }
 }
 
 .canvas-tool-btn.active {
@@ -5132,9 +5229,11 @@ body {
   border-color: #fecdd3;
   background: #fff1f2;
 }
-.canvas-action-btn.danger:hover {
-  background: #ffe4e6;
-  border-color: #fda4af;
+@media (hover: hover) and (pointer: fine) {
+  .canvas-action-btn.danger:hover {
+    background: #ffe4e6;
+    border-color: #fda4af;
+  }
 }
 
 /* Canvas Container with Cross Grid */
@@ -5370,9 +5469,11 @@ body {
   color: #ffffff;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
 }
-.btn-grade-btn.correct:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+@media (hover: hover) and (pointer: fine) {
+  .btn-grade-btn.correct:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+  }
 }
 
 .btn-grade-btn.retry {
@@ -5380,9 +5481,11 @@ body {
   border-color: #fdba74;
   color: #c2410c;
 }
-.btn-grade-btn.retry:hover {
-  background: #ffedd5;
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .btn-grade-btn.retry:hover {
+    background: #ffedd5;
+    transform: translateY(-1px);
+  }
 }
 
 .btn-grade-btn.pass {
@@ -5390,10 +5493,12 @@ body {
   border-color: #cbd5e1;
   color: #64748b;
 }
-.btn-grade-btn.pass:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #334155;
+@media (hover: hover) and (pointer: fine) {
+  .btn-grade-btn.pass:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #334155;
+  }
 }
 
 .grade-icon {
@@ -5547,11 +5652,13 @@ body {
   user-select: none;
 }
 
-.btn-skip-pill:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #1e293b;
-  transform: scale(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .btn-skip-pill:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #1e293b;
+    transform: scale(1.05);
+  }
 }
 
 .btn-skip-pill:active {
@@ -5583,10 +5690,12 @@ body {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
-.portal-streak-badge:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
-  border-color: #f97316;
+@media (hover: hover) and (pointer: fine) {
+  .portal-streak-badge:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25);
+    border-color: #f97316;
+  }
 }
 .streak-flame {
   font-size: 1.15rem;
@@ -5623,10 +5732,12 @@ body {
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
-.btn-portal-calendar:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.22);
-  border-color: #22c55e;
+@media (hover: hover) and (pointer: fine) {
+  .btn-portal-calendar:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.22);
+    border-color: #22c55e;
+  }
 }
 
 /* Login Bonus Modal */
@@ -5770,9 +5881,11 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.btn-calendar-nav:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+@media (hover: hover) and (pointer: fine) {
+  .btn-calendar-nav:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
 }
 .calendar-current-month {
   font-size: 1.05rem;
@@ -5854,8 +5967,10 @@ body {
 .cal-day-cell:nth-child(7n) {
   border-right: none;
 }
-.cal-day-cell:hover {
-  background: #f8fafc;
+@media (hover: hover) and (pointer: fine) {
+  .cal-day-cell:hover {
+    background: #f8fafc;
+  }
 }
 .cal-day-cell.empty {
   background: #fafafa;
@@ -5982,10 +6097,12 @@ rt {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
-.btn-toggle-furigana:hover {
-  transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
-  border-color: #3b82f6;
+@media (hover: hover) and (pointer: fine) {
+  .btn-toggle-furigana:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+    border-color: #3b82f6;
+  }
 }
 .btn-toggle-furigana.active {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
@@ -6102,10 +6219,12 @@ rt {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
 }
-.btn-portal-badges:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(202, 138, 4, 0.25);
-  border-color: #eab308;
+@media (hover: hover) and (pointer: fine) {
+  .btn-portal-badges:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 14px rgba(202, 138, 4, 0.25);
+    border-color: #eab308;
+  }
 }
 .btn-portal-badges strong {
   font-size: 0.9rem;
@@ -6294,9 +6413,11 @@ rt {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.btn-equip-title:hover {
-  background: #fef08a;
-  transform: scale(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .btn-equip-title:hover {
+    background: #fef08a;
+    transform: scale(1.05);
+  }
 }
 .btn-equip-title.equipped {
   background: #ea580c;
@@ -6330,9 +6451,11 @@ rt {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   text-align: center;
 }
-.math-b-mode-btn:hover {
-  transform: translateY(-2px);
-  border-color: #cbd5e1;
+@media (hover: hover) and (pointer: fine) {
+  .math-b-mode-btn:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+  }
 }
 .math-b-mode-btn.active {
   background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
