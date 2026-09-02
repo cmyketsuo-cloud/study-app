@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakuwaku-learning-v38';
+const CACHE_NAME = 'wakuwaku-learning-v39';
 const ASSETS = [
   './',
   './index.html',

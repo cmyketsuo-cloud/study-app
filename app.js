@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v38)
+//  🌸 APP VERSION DEFINITION (v39)
 // =============================================
-const APP_VERSION_CODE = 'v38';
-const APP_VERSION_LABEL = '🌸 ばーじょん38 🌸';
+const APP_VERSION_CODE = 'v39';
+const APP_VERSION_LABEL = '🌸 ばーじょん39 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
