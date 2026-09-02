@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v37)
+//  🌸 APP VERSION DEFINITION (v38)
 // =============================================
-const APP_VERSION_CODE = 'v37';
-const APP_VERSION_LABEL = '🌸 ばーじょん37 🌸';
+const APP_VERSION_CODE = 'v38';
+const APP_VERSION_LABEL = '🌸 ばーじょん38 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -1338,6 +1338,7 @@ function renderPortalScreen() {
   const ptsWriting = getPointPerQuestion(acc, 'writing');
   const ptsMath = getPointPerQuestion(acc, 'math');
   const ptsTyping = getPointPerQuestion(acc, 'typing');
+  const ptsKana = getPointPerQuestion(acc, 'kana');
 
   const kanjiHintEl = document.getElementById('portal-kanji-pts-hint');
   if (kanjiHintEl) kanjiHintEl.textContent = `🪙 ${formatPoints(ptsKanji)}pt/問`;
@@ -1347,6 +1348,18 @@ function renderPortalScreen() {
   if (mathHintEl) mathHintEl.textContent = `🪙 ${formatPoints(ptsMath)}pt/問`;
   const typingHintEl = document.getElementById('portal-typing-pts-hint');
   if (typingHintEl) typingHintEl.textContent = `🪙 0.1〜${formatPoints(ptsTyping)}pt`;
+
+  // E-7: かな読みカードの表示制御（2年生以下のアカウントのみ表示、3年生以上は非表示）
+  const cardKana = document.getElementById('card-subject-kana');
+  if (cardKana) {
+    if (grade !== null && grade <= 2) {
+      cardKana.style.display = 'flex';
+      const kanaHintEl = document.getElementById('portal-kana-pts-hint');
+      if (kanaHintEl) kanaHintEl.textContent = `🪙 ${formatPoints(ptsKana)}pt/問`;
+    } else {
+      cardKana.style.display = 'none';
+    }
+  }
 
   // 漢字カード情報
   const mStats = getMasteryStats(currentAccountId, effectiveGrade);
@@ -2323,12 +2336,15 @@ function renderParentPanel() {
   // 1問あたりのポイント設定フォームへの初期値反映
   const weights = (acc && acc.customPointWeights) || {};
   const defKanji = getPointPerQuestion(acc, 'kanji');
+  const defKana = getPointPerQuestion(acc, 'kana');
   const defWriting = getPointPerQuestion(acc, 'writing');
   const defMath = getPointPerQuestion(acc, 'math');
   const defTyping = getPointPerQuestion(acc, 'typing');
 
   const elKanji = document.getElementById('cfg-weight-kanji');
   if (elKanji) elKanji.value = weights.kanji !== undefined ? weights.kanji : defKanji;
+  const elKana = document.getElementById('cfg-weight-kana');
+  if (elKana) elKana.value = weights.kana !== undefined ? weights.kana : defKana;
   const elWriting = document.getElementById('cfg-weight-writing');
   if (elWriting) elWriting.value = weights.writing !== undefined ? weights.writing : defWriting;
   const elMath = document.getElementById('cfg-weight-math');
@@ -2348,17 +2364,20 @@ function savePointWeights() {
   if (!acc) return;
 
   const wKanji = parseFloat(document.getElementById('cfg-weight-kanji').value);
+  const elKana = document.getElementById('cfg-weight-kana');
+  const wKana = elKana ? parseFloat(elKana.value) : 0.5;
   const wWriting = parseFloat(document.getElementById('cfg-weight-writing').value);
   const wMath = parseFloat(document.getElementById('cfg-weight-math').value);
   const wTyping = parseFloat(document.getElementById('cfg-weight-typing').value);
 
-  if (isNaN(wKanji) || wKanji <= 0 || isNaN(wWriting) || wWriting <= 0 || isNaN(wMath) || wMath <= 0 || isNaN(wTyping) || wTyping <= 0) {
+  if (isNaN(wKanji) || wKanji <= 0 || isNaN(wKana) || wKana <= 0 || isNaN(wWriting) || wWriting <= 0 || isNaN(wMath) || wMath <= 0 || isNaN(wTyping) || wTyping <= 0) {
     alert('正しいポイント数（0.1以上）を入力してください。');
     return;
   }
 
   acc.customPointWeights = {
     kanji: Math.round(wKanji * 10) / 10,
+    kana: Math.round(wKana * 10) / 10,
     writing: Math.round(wWriting * 10) / 10,
     math: Math.round(wMath * 10) / 10,
     typing: Math.round(wTyping * 10) / 10
@@ -2826,6 +2845,7 @@ function getPointPerQuestion(acc, subject) {
   if (subject === 'kanji') {
     return (grade <= 2) ? 1.0 : 0.2; // 1〜2年生は 1.0pt、3年生以上は 0.2pt
   }
+  if (subject === 'kana') return 0.5; // E-5: かな読みは 0.5pt（低学年向け易問）
   if (subject === 'writing') return 1.0;
   if (subject === 'math') return 1.0;
   if (subject === 'typing') return 0.4;
@@ -2833,12 +2853,16 @@ function getPointPerQuestion(acc, subject) {
 }
 
 // =============================================
-//  DIFFICULTY & POINT CALCULATION (漢字読みクイズ)
+//  DIFFICULTY & POINT CALCULATION (漢字・かなクイズ)
 // =============================================
+let quizMode = 'kanji';               // E-3: 'kanji' | 'kana_katakana' | 'kana_hiragana'
+let lastQuizSessionType = 'kanji';     // リトライ用記憶
+
 function calcQuestionPoint(q) {
   const acc = accounts[currentAccountId];
-  const basePoints = getPointPerQuestion(acc, 'kanji');
-  const bonus = q.isWeakRevenge ? 0.2 : 0;
+  const isKana = (quizMode !== 'kanji');
+  const basePoints = getPointPerQuestion(acc, isKana ? 'kana' : 'kanji');
+  const bonus = (!isKana && q && q.isWeakRevenge) ? 0.2 : 0;
   const total = Math.round((basePoints + bonus) * 100) / 100;
 
   return {
@@ -2854,7 +2878,62 @@ let sessionEarnedPoints = 0;
 let quizSessionFinished = false;
 let quizTransitionTimer = null;
 
+// E-2: かな用の選択肢生成（getDistractorsは使わず、データのdフィールドを使用）
+function buildKanaQuiz(type, count = 10) {
+  const source = (type === 'katakana')
+    ? (typeof KANA_DATA_KATAKANA !== 'undefined' ? KANA_DATA_KATAKANA : [])
+    : (typeof KANA_DATA_HIRAGANA !== 'undefined' ? KANA_DATA_HIRAGANA : []);
+
+  const chosen = shuffle([...source]).slice(0, count);
+  return chosen.map(item => {
+    const distractors = Array.isArray(item.d) ? item.d : [];
+    const choices = shuffle([item.a, ...distractors]);
+    return {
+      question: item.q,
+      correct: item.a,
+      choices,
+      ex: item.ex || '',
+      isWeakRevenge: false
+    };
+  });
+}
+
+function startKanaQuiz(type) {
+  quizMode = (type === 'katakana') ? 'kana_katakana' : 'kana_hiragana';
+  lastQuizSessionType = quizMode;
+  quizSessionFinished = false;
+  if (quizTransitionTimer) {
+    clearTimeout(quizTransitionTimer);
+    quizTransitionTimer = null;
+  }
+  isWeakTrainingMode = false;
+
+  quizQuestions = buildKanaQuiz(type, 10);
+  if (quizQuestions.length === 0) {
+    alert('かなデータが見つかりませんでした！');
+    quizMode = 'kanji';
+    return;
+  }
+
+  currentIndex = 0;
+  score = 0;
+  sessionEarnedPoints = 0;
+  wrongAnswers = [];
+  conqueredThisSession = [];
+  masteredThisSession = [];
+  answered = false;
+
+  document.getElementById('q-total').textContent = quizQuestions.length;
+  document.getElementById('quiz-mode-tag').textContent = (type === 'katakana') ? 'カタカナ' : 'ひらがな';
+  document.getElementById('quiz-session-points').textContent = '0';
+  updateScore();
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+
 function startQuiz(weakOnly = false) {
+  quizMode = 'kanji';
+  lastQuizSessionType = 'kanji';
   quizSessionFinished = false;
   if (quizTransitionTimer) {
     clearTimeout(quizTransitionTimer);
@@ -2919,28 +2998,37 @@ function renderQuestion() {
   }
 
   const text = q.question;
-  const hasBrackets = text.includes('【') && text.includes('】');
+  const isKana = (quizMode !== 'kanji');
 
-  if (hasBrackets) {
-    qLabel.innerHTML = addFurigana('赤いわくの漢字の「読み方」は？');
-    kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-sentence';
-    const highlighted = text.replace(/【(.*?)】/g, '<span class="target-kanji-highlight serif-text">$1</span>');
-    kanjiCharEl.innerHTML = `<span class="sentence-text">${addFurigana(highlighted)}</span>`;
-  } else if (text.length === 1) {
-    qLabel.innerHTML = addFurigana('この漢字の「読み方」は？');
+  if (isKana) {
+    // E-3: かなモード（単漢字モードの見た目、固定文言、ルビなし、exヒント非表示）
+    qLabel.innerHTML = 'この もじは なんと よむ？';
     kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-single';
     kanjiCharEl.innerHTML = `<span class="single-kanji serif-text">${text}</span>`;
-  } else if (text.length <= 4) {
-    qLabel.innerHTML = addFurigana('この言葉の「読み方」は？');
-    kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-word';
-    kanjiCharEl.innerHTML = `<span class="word-kanji serif-text">${text}</span>`;
+    document.getElementById('example-sentence').innerHTML = '';
   } else {
-    qLabel.innerHTML = addFurigana('この言葉の「読み方」は？');
-    kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-phrase';
-    kanjiCharEl.innerHTML = `<span class="phrase-kanji serif-text">${text}</span>`;
+    // 漢字モード（文長に応じたレイアウト・ルビ）
+    const hasBrackets = text.includes('【') && text.includes('】');
+    if (hasBrackets) {
+      qLabel.innerHTML = addFurigana('赤いわくの漢字の「読み方」は？');
+      kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-sentence';
+      const highlighted = text.replace(/【(.*?)】/g, '<span class="target-kanji-highlight serif-text">$1</span>');
+      kanjiCharEl.innerHTML = `<span class="sentence-text">${addFurigana(highlighted)}</span>`;
+    } else if (text.length === 1) {
+      qLabel.innerHTML = addFurigana('この漢字の「読み方」は？');
+      kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-single';
+      kanjiCharEl.innerHTML = `<span class="single-kanji serif-text">${text}</span>`;
+    } else if (text.length <= 4) {
+      qLabel.innerHTML = addFurigana('この言葉の「読み方」は？');
+      kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-word';
+      kanjiCharEl.innerHTML = `<span class="word-kanji serif-text">${text}</span>`;
+    } else {
+      qLabel.innerHTML = addFurigana('この言葉の「読み方」は？');
+      kanjiCard.className = 'kanji-card pop-card pop-kanji-box mode-phrase';
+      kanjiCharEl.innerHTML = `<span class="phrase-kanji serif-text">${text}</span>`;
+    }
+    document.getElementById('example-sentence').innerHTML = q.hint ? addFurigana(`💡 意味: ${q.hint}`) : '';
   }
-
-  document.getElementById('example-sentence').innerHTML = q.hint ? addFurigana(`💡 意味: ${q.hint}`) : '';
 
   // 選択肢（明朝体）
   const grid = document.getElementById('choices-grid');
@@ -2952,7 +3040,8 @@ function renderQuestion() {
     btn.setAttribute('role', 'listitem');
     btn.id = `choice-${i}`;
     btn.style.setProperty('--i', i);
-    btn.innerHTML = `<span class="choice-text serif-text">${addFurigana(choice)}</span>`;
+    const choiceHtml = isKana ? choice : addFurigana(choice);
+    btn.innerHTML = `<span class="choice-text serif-text">${choiceHtml}</span>`;
     btn.addEventListener('click', () => handleChoice(btn, choice, q));
     grid.appendChild(btn);
   });
@@ -2971,11 +3060,13 @@ function handleChoice(btn, choice, q) {
   allBtns.forEach(b => b.disabled = true);
 
   const fb = document.getElementById('feedback-overlay');
+  const isKana = (quizMode !== 'kanji');
+  const histKey = isKana ? `kana:${q.question}` : q.question; // E-6: かな履歴はプレフィックス付きで衝突防止
   const history = loadHistory(currentAccountId);
-  if (!history[q.question]) {
-    history[q.question] = { wrongCount: 0, correctCount: 0, streak: 0, isWeak: false, lastAnswered: Date.now() };
+  if (!history[histKey]) {
+    history[histKey] = { wrongCount: 0, correctCount: 0, streak: 0, isWeak: false, lastAnswered: Date.now() };
   }
-  const record = history[q.question];
+  const record = history[histKey];
   const prevStreak = record.streak || 0;
   const ptInfo = calcQuestionPoint(q);
 
@@ -2991,34 +3082,49 @@ function handleChoice(btn, choice, q) {
     record.streak = (record.streak || 0) + 1;
     record.lastAnswered = Date.now();
 
-    // 苦手問題だった場合は克服判定！
-    if (record.isWeak) {
-      record.isWeak = false;
-      record.streak = 1;
-      conqueredThisSession.push(q);
-      ConfettiFx.launch(35);
+    if (isKana) {
+      // E-4: かなモード正解時の語例表示（ex があれば表示、空文字なら通常表示）
+      let exText = '';
+      if (q.ex && q.ex.trim() !== '') {
+        exText = `<small style="font-size:1.05rem;background:#ffffff;padding:0.3rem 0.8rem;border-radius:20px;border:3px solid #10b981;color:#065f46;display:inline-block;margin-top:0.5rem;line-height:1.4;box-shadow:0 4px 10px rgba(0,0,0,0.1);">せいかい！ ${q.question} は「${q.ex}」の ${q.question} だよ</small>`;
+      } else {
+        exText = `<small style="font-size:1.3rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #f59e0b;color:#b45309;display:inline-block;margin-top:0.3rem;">+${ptInfo.total}pt</small>`;
+      }
       fb.innerHTML = `
         <span class="fb-symbol fb-correct pop-bounce">
           💮<br>
-          <small style="font-size:1.5rem;background:#ffffff;padding:0.2rem 0.8rem;border-radius:20px;border:3px solid #10b981;color:#065f46;">こくふく！ +${ptInfo.total}pt</small>
-        </span>
-      `;
-    } else if (record.streak === 3 && prevStreak < 3) {
-      // 3回連続正解で新マスター達成！
-      masteredThisSession.push(q);
-      fb.innerHTML = `
-        <span class="fb-symbol fb-correct pop-bounce">
-          👑<br>
-          <small style="font-size:1.4rem;background:#ffffff;padding:0.2rem 0.8rem;border-radius:20px;border:3px solid #f59e0b;color:#b45309;">マスター達成！ +${ptInfo.total}pt</small>
+          ${exText}
         </span>
       `;
     } else {
-      fb.innerHTML = `
-        <span class="fb-symbol fb-correct pop-bounce">
-          ⭕<br>
-          <small style="font-size:1.3rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #f59e0b;color:#b45309;">+${ptInfo.total}pt</small>
-        </span>
-      `;
+      // 漢字モード（苦手克服・マスター判定）
+      if (record.isWeak) {
+        record.isWeak = false;
+        record.streak = 1;
+        conqueredThisSession.push(q);
+        ConfettiFx.launch(35);
+        fb.innerHTML = `
+          <span class="fb-symbol fb-correct pop-bounce">
+            💮<br>
+            <small style="font-size:1.5rem;background:#ffffff;padding:0.2rem 0.8rem;border-radius:20px;border:3px solid #10b981;color:#065f46;">こくふく！ +${ptInfo.total}pt</small>
+          </span>
+        `;
+      } else if (record.streak === 3 && prevStreak < 3) {
+        masteredThisSession.push(q);
+        fb.innerHTML = `
+          <span class="fb-symbol fb-correct pop-bounce">
+            👑<br>
+            <small style="font-size:1.4rem;background:#ffffff;padding:0.2rem 0.8rem;border-radius:20px;border:3px solid #f59e0b;color:#b45309;">マスター達成！ +${ptInfo.total}pt</small>
+          </span>
+        `;
+      } else {
+        fb.innerHTML = `
+          <span class="fb-symbol fb-correct pop-bounce">
+            ⭕<br>
+            <small style="font-size:1.3rem;background:#ffffff;padding:0.2rem 0.7rem;border-radius:20px;border:2px solid #f59e0b;color:#b45309;">+${ptInfo.total}pt</small>
+          </span>
+        `;
+      }
     }
   } else {
     SoundFx.playWrong();
@@ -3044,7 +3150,7 @@ function handleChoice(btn, choice, q) {
       question: q.question,
       correct: q.correct,
       yourAnswer: choice,
-      hint: q.hint,
+      hint: q.hint || '',
     });
   }
 
@@ -3095,12 +3201,19 @@ function showResult(totalOverride) {
   document.getElementById('result-total').textContent = total;
   document.getElementById('result-percent').textContent = pct;
 
-  // ポイント付与 & 保存（月間・日別上限判定）
+  // E-5: ポイント付与 & 保存（かな/漢字で科目キー・名称を切り替え）
+  const isKana = (quizMode !== 'kanji');
+  const subjectKey = isKana ? 'kana' : 'kanji';
+  const subjectName = isKana ? '🔤 かな読み' : '📚 漢字ドリル';
+  const historyTitle = isKana
+    ? `かなクイズ${score}問正解 (${total}問中)`
+    : `クイズ${score}問正解 (${total}問中)`;
+
   const acc = accounts[currentAccountId];
   const { actualEarnedPoints, limitNoticeText } = applyEarnedPoints(acc, {
-    subjectKey: 'kanji',
-    subjectName: '📚 漢字ドリル',
-    historyTitle: `クイズ${score}問正解 (${total}問中)`,
+    subjectKey: subjectKey,
+    subjectName: subjectName,
+    historyTitle: historyTitle,
     requestedPoints: sessionEarnedPoints,
     totalQuestions: total,
     correctCount: score
@@ -3140,10 +3253,10 @@ function showResult(totalOverride) {
     document.getElementById('ring-fill').style.strokeDashoffset = offset;
   }, 300);
 
-  // 今回新しくマスターした漢字ボックス
+  // 今回新しくマスターした漢字ボックス（かなモードでは非表示）
   const masteredBox = document.getElementById('result-mastered-box');
   if (masteredBox) {
-    if (masteredThisSession.length > 0) {
+    if (!isKana && masteredThisSession.length > 0) {
       masteredBox.style.display = 'block';
       const tagList = masteredThisSession.map(q => {
         const cleanQ = q.question.replace(/【(.*?)】/g, '$1');
@@ -3158,10 +3271,10 @@ function showResult(totalOverride) {
     }
   }
 
-  // 克服できた問題ボックス
+  // 克服できた問題ボックス（かなモードでは非表示）
   const conqueredBox = document.getElementById('result-conquered-box');
   if (conqueredBox) {
-    if (conqueredThisSession.length > 0) {
+    if (!isKana && conqueredThisSession.length > 0) {
       conqueredBox.style.display = 'block';
       const tagList = conqueredThisSession.map(q => {
         const cleanQ = q.question.replace(/【(.*?)】/g, '$1');
@@ -3183,7 +3296,9 @@ function showResult(totalOverride) {
   if (wrongAnswers.length > 0) {
     const titleEl = document.createElement('p');
     titleEl.className = 'wrong-list-title';
-    titleEl.textContent = `▼ おさらいしよう (${wrongAnswers.length}問・次回優先して出題されます)`;
+    titleEl.textContent = isKana
+      ? `▼ おさらいしよう (${wrongAnswers.length}問)`
+      : `▼ おさらいしよう (${wrongAnswers.length}問・次回優先して出題されます)`;
     listEl.appendChild(titleEl);
 
     wrongAnswers.forEach(w => {
@@ -3212,10 +3327,13 @@ function showResult(totalOverride) {
 
   // 🏆 実績判定 & ポップアップ
   checkAndUnlockAchievements(acc, {
-    kanjiPerfect: score === total && total >= 5,
-    weakConquered: conqueredThisSession.length > 0
+    kanjiPerfect: !isKana && score === total && total >= 5,
+    weakConquered: !isKana && conqueredThisSession.length > 0
   });
   setTimeout(() => showPendingBadgePopups(), 600);
+
+  // E-3: セッション終了時にモードをリセット
+  quizMode = 'kanji';
 }
 
 // =============================================
@@ -6385,17 +6503,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // E-7: ポータル画面 かな読みボタン
+  const btnPortalKanaKatakana = document.getElementById('btn-portal-kana-katakana');
+  if (btnPortalKanaKatakana) {
+    btnPortalKanaKatakana.addEventListener('click', () => startKanaQuiz('katakana'));
+  }
+  const btnPortalKanaHiragana = document.getElementById('btn-portal-kana-hiragana');
+  if (btnPortalKanaHiragana) {
+    btnPortalKanaHiragana.addEventListener('click', () => startKanaQuiz('hiragana'));
+  }
+
   document.getElementById('btn-change-account').addEventListener('click', () => {
+    quizMode = 'kanji';
     renderAccountScreen();
     showScreen('screen-account');
   });
   document.getElementById('btn-quit').addEventListener('click', () => {
     const answeredCount = currentIndex + (answered ? 1 : 0);
+    const isKana = (quizMode !== 'kanji');
+    const quitConfirmText = isKana ? 'かなクイズをやめてポータルにもどる？' : '漢字クイズをやめてポータルにもどる？';
     if (answeredCount === 0) {
-      if (confirm('漢字クイズをやめてポータルにもどる？')) {
+      if (confirm(quitConfirmText)) {
         quizSessionFinished = true;
         if (quizTransitionTimer) { clearTimeout(quizTransitionTimer); quizTransitionTimer = null; }
         updateStartScreenWeakBanner();
+        quizMode = 'kanji';
         if (currentAccountId !== null) {
           renderPortalScreen();
         } else {
@@ -6410,8 +6542,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  document.getElementById('btn-retry').addEventListener('click', () => startQuiz(isWeakTrainingMode));
+  document.getElementById('btn-retry').addEventListener('click', () => {
+    if (lastQuizSessionType === 'kana_katakana') {
+      startKanaQuiz('katakana');
+    } else if (lastQuizSessionType === 'kana_hiragana') {
+      startKanaQuiz('hiragana');
+    } else {
+      startQuiz(isWeakTrainingMode);
+    }
+  });
   document.getElementById('btn-home').addEventListener('click', () => {
+    quizMode = 'kanji';
     if (currentAccountId !== null) {
       renderPortalScreen();
     } else {

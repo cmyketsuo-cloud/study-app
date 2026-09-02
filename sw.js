@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakuwaku-learning-v37';
+const CACHE_NAME = 'wakuwaku-learning-v38';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './writing_data.js',
   './math_data.js',
   './typing_data.js',
+  './kana_data.js',
   './character_guide.png',
   './manifest.json',
   './apple-touch-icon.png',

@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん37 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん38 🌸</span>
       </div>
     </div>
   </div>
@@ -366,10 +366,33 @@
             <span>🚀</span> タイピングをはじめる！
           </button>
         </div>
+
+        <!-- 🔤 かな読み（カタカナ・ひらがな） -->
+        <div class="subject-card pop-card subject-kana" id="card-subject-kana" style="display:none;">
+          <div class="subject-card-header">
+            <span class="subject-badge kana" style="background:#e0e7ff;color:#3730a3;">🔤 かな</span>
+            <span class="subject-points-hint" id="portal-kana-pts-hint">🪙 0.5pt/問</span>
+          </div>
+          <div class="subject-icon pop-bounce">あ</div>
+          <h3 class="subject-title">かな読み</h3>
+          <p class="subject-desc">似ている形の文字を見分けよう！10問サクサク練習！</p>
+          <div class="subject-meta">
+            <span>🔤 カタカナ・ひらがな</span>
+            <span class="subject-badge-ready" style="background:#e0e7ff;color:#4338ca;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #c7d2fe;font-size:0.75rem;">👀 かたち見分け</span>
+          </div>
+          <div class="kana-card-buttons" style="display:flex;gap:0.5rem;width:100%;margin-top:0.5rem;">
+            <button class="btn-subject-start btn-pop-primary btn-kana-theme" id="btn-portal-kana-katakana" style="flex:1;padding:0.8rem 0.4rem;font-size:0.95rem;">
+              カタカナを よむ
+            </button>
+            <button class="btn-subject-start btn-pop-primary btn-kana-theme" id="btn-portal-kana-hiragana" style="flex:1;padding:0.8rem 0.4rem;font-size:0.95rem;">
+              ひらがなを よむ
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん37 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん38 🌸</span>
       </div>
     </div>
   </div>
@@ -1549,6 +1572,13 @@
                   </div>
                 </div>
                 <div class="weight-item">
+                  <label for="cfg-weight-kana">🔤 かな読み（選択式）:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-kana" class="form-input pop-input-sm" value="0.5" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
+                <div class="weight-item">
                   <label for="cfg-weight-writing">✍️ 漢字書き取りドリル:</label>
                   <div class="weight-input-wrap">
                     <input type="number" id="cfg-weight-writing" class="form-input pop-input-sm" value="1.0" min="0.1" max="5.0" step="0.1">
@@ -1892,10 +1922,11 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260902_v37"></script>
-  <script src="writing_data.js?v=20260902_v37"></script>
-  <script src="math_data.js?v=20260902_v37"></script>
-  <script src="typing_data.js?v=20260902_v37"></script>
-  <script src="app.js?v=20260902_v37"></script>
+  <script src="quiz_data.js?v=20260902_v38"></script>
+  <script src="writing_data.js?v=20260902_v38"></script>
+  <script src="math_data.js?v=20260902_v38"></script>
+  <script src="typing_data.js?v=20260902_v38"></script>
+  <script src="kana_data.js?v=20260902_v38"></script>
+  <script src="app.js?v=20260902_v38"></script>
 </body>
 </html>
