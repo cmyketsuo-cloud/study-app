@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v34)
+//  🌸 APP VERSION DEFINITION (v35)
 // =============================================
-const APP_VERSION_CODE = 'v34';
-const APP_VERSION_LABEL = '🌸 ばーじょん34 🌸';
+const APP_VERSION_CODE = 'v35';
+const APP_VERSION_LABEL = '🌸 ばーじょん35 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -4674,59 +4674,17 @@ const WritingCanvas = (() => {
   let activePointerId = null;
   let resizeObserver = null;
 
-  // 一時的なペン入力デバッグ統計 ＆ イベントシーケンス記録（原因調査用・特定後に削除予定）
-  let debugPointerStats = { down: 0, move: 0, up: 0, cancel: 0 };
-  let debugPointerEvents = [];
-
-  function recordDebugEvent(char) {
-    debugPointerEvents.push(char);
-    if (debugPointerEvents.length > 40) {
-      debugPointerEvents.shift();
-    }
-  }
-
-  function formatDebugEvents(events) {
-    if (!events || events.length === 0) return '-';
-    let result = '';
-    let i = 0;
-    while (i < events.length) {
-      const c = events[i];
-      if (c === 'm' || c === 'x') {
-        let count = 0;
-        while (i < events.length && events[i] === c) {
-          count++;
-          i++;
-        }
-        result += (count > 1) ? (c + count) : c;
-      } else {
-        result += c;
-        i++;
-      }
-    }
-    return result;
-  }
-
-  function updateDebugPointerDisplay() {
-    let el = document.getElementById('writing-pointer-debug');
-    if (!el) {
-      const container = document.getElementById('writing-canvas-container');
-      if (!container || !container.parentNode) return;
-      el = document.createElement('div');
-      el.id = 'writing-pointer-debug';
-      el.style.cssText = 'font-size: 11px; color: #64748b; text-align: center; margin: 2px 0 6px 0; font-family: monospace; user-select: none; pointer-events: none; max-width: 320px; word-break: break-all; line-height: 1.3;';
-      container.parentNode.insertBefore(el, container);
-    }
-    const formattedEvents = formatDebugEvents(debugPointerEvents);
-    el.innerHTML = `<div>down: ${debugPointerStats.down} | move: ${debugPointerStats.move} | up: ${debugPointerStats.up} | cancel: ${debugPointerStats.cancel}</div><div style="font-size: 10px; color: #475569; margin-top: 1px; word-break: break-all;">log: ${formattedEvents}</div>`;
-  }
-
-  function resetDebugPointerStats() {
-    debugPointerStats = { down: 0, move: 0, up: 0, cancel: 0 };
-    debugPointerEvents = [];
-    updateDebugPointerDisplay();
-  }
-
-  // iPadOS スクリブル対策：touchmove のデフォルト動作を抑止してペンの横取り（文字入力判定）を防ぐ回避策
+  // =================================================================================
+  // 【重要・削除禁止】iPadOS スクリブル（Apple Pencil手書き入力）によるペン入力横取り防止ハンドラ
+  // 1. iPadOS のスクリブル機能が Apple Pencil の素早いストロークを「文字入力（Scribble）」
+  //    と誤判定して pointerdown を横取り・破棄してしまう既知の Safari 不具合への回避策です。
+  // 2. CSS の touch-action: none や user-select: none では効きません。
+  //    （これら2つは元から設定されていましたが、スクリブルの横取りは防止できませんでした）
+  // 3. touchmove イベントのリスナー登録時に { passive: false } が必須です。
+  //    （passive: true だとブラウザ仕様により preventDefault() が無視されます）
+  // 4. 無名関数ではなく名前付き関数（handleTouchMovePrevent）として定義しないと
+  //    removeEventListener が効かず、問題ごとの init() 呼び出しでリスナーが積み上がってしまいます。
+  // =================================================================================
   function handleTouchMovePrevent(e) {
     if (e && e.preventDefault) {
       e.preventDefault();
@@ -4766,7 +4724,8 @@ const WritingCanvas = (() => {
       cell.canvas.onpointerup = (e) => handlePointerUp(e, idx);
       cell.canvas.onpointercancel = (e) => handlePointerCancel(e, idx);
 
-      // iPadOS スクリブル回避策：touchmove を preventDefault してペン入力横取りを抑制（passive: false、重複防止）
+      // 【重要・削除禁止】iPadOS スクリブル回避策：touchmove を preventDefault してペン入力横取りを抑制
+      // ※ passive: false が必須。多重登録防止のため直前に removeEventListener を呼ぶ
       cell.canvas.removeEventListener('touchmove', handleTouchMovePrevent);
       cell.canvas.addEventListener('touchmove', handleTouchMovePrevent, { passive: false });
     });
@@ -4778,8 +4737,6 @@ const WritingCanvas = (() => {
       window.addEventListener('resize', handleResize);
       window.addEventListener('orientationchange', handleResize);
     }
-
-    resetDebugPointerStats();
   }
 
   function handleResize() {
@@ -4868,15 +4825,9 @@ const WritingCanvas = (() => {
   }
 
   function handlePointerDown(e, cellIdx) {
-    debugPointerStats.down++;
-
     e.preventDefault();
     const cell = cells[cellIdx];
-    if (!cell || !cell.canvas || !cell.ctx) {
-      recordDebugEvent('d');
-      updateDebugPointerDisplay();
-      return;
-    }
+    if (!cell || !cell.canvas || !cell.ctx) return;
 
     // 保険チェック: 描画開始時に内部解像度と表示サイズが一致しているか確認
     const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
@@ -4909,19 +4860,10 @@ const WritingCanvas = (() => {
     };
 
     drawStrokeSegment(cell.ctx, currentTool, pos, pos, pVal);
-
-    recordDebugEvent('D');
-    updateDebugPointerDisplay();
   }
 
   function handlePointerMove(e, cellIdx) {
-    debugPointerStats.move++;
-
-    if (!isDrawing || activeCellIdx !== cellIdx) {
-      recordDebugEvent('x');
-      updateDebugPointerDisplay();
-      return;
-    }
+    if (!isDrawing || activeCellIdx !== cellIdx) return;
     e.preventDefault();
 
     const cell = cells[cellIdx];
@@ -4937,11 +4879,7 @@ const WritingCanvas = (() => {
       cell.currentStroke.apiStroke[2].push(elapsed);
 
       drawStrokeSegment(cell.ctx, cell.currentStroke.tool, lastPt, pos, pVal);
-      recordDebugEvent('m');
-    } else {
-      recordDebugEvent('x');
     }
-    updateDebugPointerDisplay();
   }
 
   function drawStrokeSegment(ctx, tool, p0, p1, pressure) {
@@ -4972,7 +4910,7 @@ const WritingCanvas = (() => {
   }
 
   function finishStroke(e, cellIdx) {
-    if (!isDrawing) return false;
+    if (!isDrawing) return;
     if (e && e.preventDefault) e.preventDefault();
     isDrawing = false;
     const cell = cells[cellIdx];
@@ -4986,23 +4924,15 @@ const WritingCanvas = (() => {
       cell.strokes.push(cell.currentStroke);
       undoActionStack.push({ type: 'stroke', cellIdx });
       cell.currentStroke = null;
-      return true;
     }
-    return false;
   }
 
   function handlePointerUp(e, cellIdx) {
-    debugPointerStats.up++;
-    const saved = finishStroke(e, cellIdx);
-    recordDebugEvent(saved ? 'U' : 'u');
-    updateDebugPointerDisplay();
+    finishStroke(e, cellIdx);
   }
 
   function handlePointerCancel(e, cellIdx) {
-    debugPointerStats.cancel++;
     finishStroke(e, cellIdx);
-    recordDebugEvent('C');
-    updateDebugPointerDisplay();
   }
 
   function getPos(e, targetCanvas) {
@@ -5074,7 +5004,6 @@ const WritingCanvas = (() => {
       }
     });
     setTool('pencil');
-    resetDebugPointerStats();
   }
 
   function getStrokes(cellIdx) {
@@ -5138,6 +5067,25 @@ async function recognizeHandwritingAPI(strokes, width = 300, height = 300) {
 }
 
 // 出題生成ロジック（現学年70% ＋ 前学年30%）
+// =============================================
+//  学年別 手書き文字認識 許容候補数設定 (B-7)
+//  低学年の字の崩れを救済（1〜2年生は上位15個、3年生以上は現行の8個）
+// =============================================
+const WRITING_CANDIDATE_LIMITS_BY_GRADE = {
+  1: 15,
+  2: 15,
+  3: 8,
+  4: 8,
+  5: 8,
+  6: 8
+};
+
+function getWritingCandidateLimit(grade) {
+  const g = Math.min(Math.max(grade || 1, 1), 6);
+  return WRITING_CANDIDATE_LIMITS_BY_GRADE[g] || 8;
+}
+
+// 出題生成ロジック（現学年70% ＋ 前学年30%）
 function generateWritingQuestions(grade, count) {
   const curGrade = Math.min(Math.max(grade || 1, 1), 6);
   const prevGrade = curGrade > 1 ? curGrade - 1 : 1;
@@ -5194,6 +5142,11 @@ function openWritingStart() {
 
 let writingSessionFinished = false;
 let writingTransitionTimer = null;
+let writingPracticeMode = false;         // B-3: れんしゅうモード中か（ポイント0pt）
+let writingPracticeReason = '';          // 'ai_off' | 'offline' | 'api_error'
+let writingQuestionRetried = false;      // B-4: その問題で「もういっかい」を実施中か
+let writingQuestionPointsAllowed = true; // B-4: その問題で加点対象か（2回目はfalse）
+let writingRewriteRemaining = 1;         // B-5: 「書き直す」残り可能回数（1問1回まで）
 
 function startWritingQuiz() {
   writingSessionFinished = false;
@@ -5214,6 +5167,20 @@ function startWritingQuiz() {
   writingCurrentIndex = 0;
   writingCorrectCount = 0;
   writingEarnedPoints = 0;
+
+  // B-3: セッション開始時のれんしゅうモード判定（保護者設定OFF または オフライン）
+  const isAiEnabled = localStorage.getItem('setting_ai_grading_enabled') !== 'false';
+  const isOnline = (typeof navigator !== 'undefined' && navigator.onLine !== false);
+  if (!isAiEnabled) {
+    writingPracticeMode = true;
+    writingPracticeReason = 'ai_off';
+  } else if (!isOnline) {
+    writingPracticeMode = true;
+    writingPracticeReason = 'offline';
+  } else {
+    writingPracticeMode = false;
+    writingPracticeReason = '';
+  }
 
   showScreen('screen-writing-quiz');
   setTimeout(() => {
@@ -5241,9 +5208,21 @@ function renderWritingQuestion() {
   WritingCanvas.init();
   WritingCanvas.reset();
 
+  // B-4 & B-5: 1問ごとの状態リセット
+  writingQuestionRetried = false;
+  writingQuestionPointsAllowed = !writingPracticeMode;
+  writingRewriteRemaining = 1;
+
   // 上部プログレス
   document.getElementById('writing-quiz-step').textContent = `第 ${writingCurrentIndex + 1} 問 / ${writingQuestions.length} 問`;
-  document.getElementById('writing-quiz-grade-tag').textContent = `${q.grade}年生の漢字`;
+  const gradeTag = document.getElementById('writing-quiz-grade-tag');
+  if (gradeTag) {
+    if (writingPracticeMode) {
+      gradeTag.textContent = `${q.grade}年生（📝れんしゅうモード）`;
+    } else {
+      gradeTag.textContent = `${q.grade}年生の漢字`;
+    }
+  }
   const pct = Math.round(((writingCurrentIndex) / writingQuestions.length) * 100);
   document.getElementById('writing-quiz-progress-bar').style.width = `${pct}%`;
 
@@ -5295,19 +5274,49 @@ async function checkWritingAnswer() {
 
   const textEl = document.getElementById('ai-recognized-text');
   const msgEl = document.getElementById('ai-verdict-msg');
+  const btnRetryPen = document.getElementById('btn-writing-retry-pen');
+  const btnGradeRetry = document.getElementById('btn-grade-retry');
+  const btnGradeRetryLabel = document.getElementById('btn-grade-retry-label');
 
-  // 1. AI採点OFF または オフラインの場合の手動採点フォールバック
-  if (!isAiEnabled || !isOnline) {
+  // B-3: AI採点OFF または オフライン時のれんしゅうモード処理
+  if (!isAiEnabled || !isOnline || writingPracticeMode) {
+    if (!isAiEnabled) {
+      writingPracticeMode = true;
+      writingPracticeReason = 'ai_off';
+    } else if (!isOnline) {
+      writingPracticeMode = true;
+      writingPracticeReason = 'offline';
+    }
+    writingQuestionPointsAllowed = false;
+
     document.getElementById('btn-writing-check-answer').style.display = 'none';
     if (textEl) {
-      textEl.textContent = !isAiEnabled ? '【手動採点】' : '【オフライン】';
+      textEl.textContent = '【れんしゅう】';
     }
     if (msgEl) {
       msgEl.className = 'ai-verdict-msg';
-      msgEl.textContent = !isAiEnabled
-        ? '🤖 AI採点はOFFです。お手本と見比べて○・×ボタンで採点してね！'
-        : '📶 いまはAI採点がつかえないので、お手本とおうちの人にみてもらってね！';
+      if (writingPracticeReason === 'ai_off') {
+        msgEl.textContent = '🤖 きょうは AI せんせいが おやすみ。ポイントは つかないけど、お手本を見てれんしゅうしよう！';
+      } else {
+        msgEl.textContent = '📶 インターネットがおやすみ中だよ。ポイントは つかないけど、お手本を見てれんしゅうしよう！';
+      }
     }
+
+    // B-5: 書き直すボタン（残り1回なら表示）
+    if (btnRetryPen) {
+      if (writingRewriteRemaining > 0) {
+        btnRetryPen.style.display = 'inline-flex';
+        btnRetryPen.innerHTML = '<span class="grade-icon">✍️</span><span class="grade-label">書き直す（あと1回）</span>';
+      } else {
+        btnRetryPen.style.display = 'none';
+      }
+    }
+    // れんしゅうモード時の次へボタン
+    if (btnGradeRetry) {
+      btnGradeRetry.style.display = 'inline-flex';
+      if (btnGradeRetryLabel) btnGradeRetryLabel.textContent = 'つぎへ進む ➡';
+    }
+
     document.getElementById('writing-grading-area').style.display = 'flex';
     updateWritingOverlays(true);
     return;
@@ -5326,14 +5335,31 @@ async function checkWritingAnswer() {
 
   if (loadingEl) loadingEl.style.display = 'none';
 
-  // 3. 通信エラー等で空候補が返ってきた場合のフォールバック（文字は書かれている場合）
+  // B-3: 通信エラー等で空候補が返ってきた場合のフォールバック（文字は書かれているのにAPI無応答）
   const hasStrokes = strokes1.length > 0 || (isDouble && strokes2.length > 0);
   if (hasStrokes && candidates1.length === 0 && (isDouble ? candidates2.length === 0 : true)) {
-    if (textEl) textEl.textContent = '【AI通信エラー】';
+    writingPracticeMode = true;
+    writingPracticeReason = 'api_error';
+    writingQuestionPointsAllowed = false;
+
+    if (textEl) textEl.textContent = '【れんしゅう】';
     if (msgEl) {
       msgEl.className = 'ai-verdict-msg';
-      msgEl.textContent = 'いまAI採点がお返事できませんでした。お手本と見比べて○・×で判定してね！';
+      msgEl.textContent = '☁️ AIせんせいが通信中でお返事できなかったよ。ポイントはつかないけど、お手本を見てれんしゅうしよう！';
     }
+    if (btnRetryPen) {
+      if (writingRewriteRemaining > 0) {
+        btnRetryPen.style.display = 'inline-flex';
+        btnRetryPen.innerHTML = '<span class="grade-icon">✍️</span><span class="grade-label">書き直す（あと1回）</span>';
+      } else {
+        btnRetryPen.style.display = 'none';
+      }
+    }
+    if (btnGradeRetry) {
+      btnGradeRetry.style.display = 'inline-flex';
+      if (btnGradeRetryLabel) btnGradeRetryLabel.textContent = 'つぎへ進む ➡';
+    }
+
     document.getElementById('writing-grading-area').style.display = 'flex';
     updateWritingOverlays(true);
     return;
@@ -5343,9 +5369,13 @@ async function checkWritingAnswer() {
   const char1 = candidates1[0] || (strokes1.length === 0 ? '（未入力）' : '？');
   const char2 = isDouble ? (candidates2[0] || (strokes2.length === 0 ? '（未入力）' : '？')) : '';
 
-  // 判定: 上位8候補以内に正解漢字が含まれているか
-  const match1 = candidates1.slice(0, 8).includes(targetKanji[0]);
-  const match2 = isDouble ? candidates2.slice(0, 8).includes(targetKanji[1]) : true;
+  // B-7: 学年別 許容候補数による判定
+  const acc = accounts[currentAccountId];
+  const grade = getGradeForAccount(acc);
+  const candidateLimit = getWritingCandidateLimit(grade);
+
+  const match1 = candidates1.slice(0, candidateLimit).includes(targetKanji[0]);
+  const match2 = isDouble ? candidates2.slice(0, candidateLimit).includes(targetKanji[1]) : true;
   const isCorrect = match1 && match2;
 
   if (textEl) {
@@ -5359,6 +5389,37 @@ async function checkWritingAnswer() {
     } else {
       msgEl.className = 'ai-verdict-msg wrong';
       msgEl.textContent = `惜しい！【${targetKanji}】と書こう（AI認識: ${isDouble ? char1 + '・' + char2 : char1}）`;
+    }
+  }
+
+  // 判定後のボタン表示制御
+  if (isCorrect) {
+    if (btnRetryPen) btnRetryPen.style.display = 'none';
+    if (btnGradeRetry) {
+      btnGradeRetry.style.display = 'inline-flex';
+      if (btnGradeRetryLabel) btnGradeRetryLabel.textContent = 'つぎへ進む ➡';
+    }
+  } else {
+    // 不正解時:
+    // B-5: 書き直すボタン（残り1回なら表示）
+    if (btnRetryPen) {
+      if (writingRewriteRemaining > 0) {
+        btnRetryPen.style.display = 'inline-flex';
+        btnRetryPen.innerHTML = '<span class="grade-icon">✍️</span><span class="grade-label">書き直す（あと1回）</span>';
+      } else {
+        btnRetryPen.style.display = 'none';
+      }
+    }
+    // B-4: もういっかいボタン（2回目なら「つぎへ進む」）
+    if (btnGradeRetry) {
+      btnGradeRetry.style.display = 'inline-flex';
+      if (btnGradeRetryLabel) {
+        if (!writingQuestionRetried) {
+          btnGradeRetryLabel.textContent = 'もういっかい';
+        } else {
+          btnGradeRetryLabel.textContent = 'つぎへ進む ➡';
+        }
+      }
     }
   }
 
@@ -5390,12 +5451,10 @@ function handleWritingGrading(isCorrect) {
   const acc = accounts[currentAccountId];
   const pts = getPointPerQuestion(acc, 'writing');
 
-  if (isCorrect) {
-    SoundFx.playCorrect();
+  // B-3 & B-4: 正解かつ加点許可（1回目かつれんしゅうモード外）の場合のみ加点
+  if (isCorrect && writingQuestionPointsAllowed && !writingPracticeMode) {
     writingCorrectCount++;
     writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
-  } else {
-    SoundFx.playWrong();
   }
 
   writingCurrentIndex++;
@@ -5421,42 +5480,74 @@ function showWritingResult(totalOverride) {
   const total = Math.max(writingCorrectCount, totalOverride !== undefined ? totalOverride : writingQuestions.length);
   const pct = total > 0 ? Math.round((writingCorrectCount / total) * 100) : 0;
 
-  document.getElementById('writing-result-correct').textContent = writingCorrectCount;
-  document.getElementById('writing-result-total').textContent = total;
-  document.getElementById('writing-result-accuracy').textContent = `正解率 ${pct}%`;
+  const resultTitle = document.getElementById('writing-result-title');
+  const resultSubtitle = document.getElementById('writing-result-subtitle');
+  const resultAccuracy = document.getElementById('writing-result-accuracy');
+  const resultNotice = document.getElementById('writing-result-limit-notice');
 
-  // ポイント付与 & 保存（月間・日別上限判定）
-  const acc = accounts[currentAccountId];
-  const { actualEarnedPoints: actualEarned, limitNoticeText: limitNotice } = applyEarnedPoints(acc, {
-    subjectKey: 'writing',
-    subjectName: '✍️ 漢字書き取り',
-    historyTitle: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
-    requestedPoints: writingEarnedPoints,
-    totalQuestions: total,
-    correctCount: writingCorrectCount
-  });
+  // B-3: れんしゅうモード時の結果表示
+  if (writingPracticeMode) {
+    if (resultTitle) resultTitle.textContent = '📝 れんしゅう完了！';
+    if (resultSubtitle) resultSubtitle.textContent = 'AIせんせいがおやすみだったけど、しっかり書く練習ができたね！';
+    document.getElementById('writing-result-correct').textContent = total;
+    document.getElementById('writing-result-total').textContent = total;
+    if (resultAccuracy) resultAccuracy.textContent = 'れんしゅうモード';
+    document.getElementById('writing-result-earned-points').textContent = '0';
+    if (resultNotice) {
+      resultNotice.style.display = 'block';
+      resultNotice.textContent = '※ れんしゅうモードのためポイントはつきません';
+    }
 
-  document.getElementById('writing-result-earned-points').textContent = formatPoints(actualEarned);
-  const noticeEl = document.getElementById('writing-result-limit-notice');
-  if (noticeEl) {
-    noticeEl.style.display = limitNotice ? 'block' : 'none';
-    noticeEl.textContent = limitNotice;
-  }
+    // 学習カレンダー・努力記録（練習回数としてカウント・獲得ポイントは0pt）
+    const acc = accounts[currentAccountId];
+    applyEarnedPoints(acc, {
+      subjectKey: 'writing',
+      subjectName: '✍️ 漢字書き取り',
+      historyTitle: `✍️ 漢字書き取り（れんしゅう・${total}問完了）`,
+      requestedPoints: 0,
+      totalQuestions: total,
+      correctCount: total
+    });
 
-  // 演出
-  if (pct === 100) {
     SoundFx.playFanfare();
-    ConfettiFx.launch(80);
-    document.getElementById('writing-result-title').textContent = '🌟 満点パーフェクト！';
-    document.getElementById('writing-result-subtitle').textContent = 'すごい！かんぺきに漢字が書けたね！';
-  } else if (pct >= 70) {
-    SoundFx.playFanfare();
-    ConfettiFx.launch(40);
-    document.getElementById('writing-result-title').textContent = '🎉 よくがんばったね！';
-    document.getElementById('writing-result-subtitle').textContent = '手書きでしっかり身についたね！';
+    ConfettiFx.launch(50);
   } else {
-    document.getElementById('writing-result-title').textContent = '💪 書き取り完了！';
-    document.getElementById('writing-result-subtitle').textContent = 'なんども書いておぼえよう！';
+    document.getElementById('writing-result-correct').textContent = writingCorrectCount;
+    document.getElementById('writing-result-total').textContent = total;
+    if (resultAccuracy) resultAccuracy.textContent = `正解率 ${pct}%`;
+
+    // ポイント付与 & 保存（月間・日別上限判定）
+    const acc = accounts[currentAccountId];
+    const { actualEarnedPoints: actualEarned, limitNoticeText: limitNotice } = applyEarnedPoints(acc, {
+      subjectKey: 'writing',
+      subjectName: '✍️ 漢字書き取り',
+      historyTitle: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
+      requestedPoints: writingEarnedPoints,
+      totalQuestions: total,
+      correctCount: writingCorrectCount
+    });
+
+    document.getElementById('writing-result-earned-points').textContent = formatPoints(actualEarned);
+    if (resultNotice) {
+      resultNotice.style.display = limitNotice ? 'block' : 'none';
+      resultNotice.textContent = limitNotice;
+    }
+
+    // 演出
+    if (pct === 100) {
+      SoundFx.playFanfare();
+      ConfettiFx.launch(80);
+      if (resultTitle) resultTitle.textContent = '🌟 満点パーフェクト！';
+      if (resultSubtitle) resultSubtitle.textContent = 'すごい！かんぺきに漢字が書けたね！';
+    } else if (pct >= 70) {
+      SoundFx.playFanfare();
+      ConfettiFx.launch(40);
+      if (resultTitle) resultTitle.textContent = '🎉 よくがんばったね！';
+      if (resultSubtitle) resultSubtitle.textContent = '手書きでしっかり身についたね！';
+    } else {
+      document.getElementById('writing-result-title').textContent = '💪 書き取り完了！';
+      document.getElementById('writing-result-subtitle').textContent = 'なんども書いておぼえよう！';
+    }
   }
 
   showScreen('screen-writing-result');
@@ -5464,6 +5555,7 @@ function showWritingResult(totalOverride) {
   ConfettiFx.launch(writingCorrectCount >= writingQuestions.length ? 80 : 50);
 
   // 🏆 実績判定 & ポップアップ
+  const acc = accounts[currentAccountId];
   checkAndUnlockAchievements(acc);
   setTimeout(() => showPendingBadgePopups(), 600);
 }
@@ -5926,9 +6018,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCheckAnswer = document.getElementById('btn-writing-check-answer');
   if (btnCheckAnswer) btnCheckAnswer.addEventListener('click', checkWritingAnswer);
 
+  // B-5: 書き直すボタン（1問につき1回まで）
   const btnRetryPen = document.getElementById('btn-writing-retry-pen');
   if (btnRetryPen) {
     btnRetryPen.addEventListener('click', () => {
+      if (writingRewriteRemaining <= 0) return;
+      writingRewriteRemaining--;
       SoundFx.playTap();
       WritingCanvas.clear();
       document.getElementById('writing-grading-area').style.display = 'none';
@@ -5944,11 +6039,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const btnGradeCorrect = document.getElementById('btn-grade-correct');
-  if (btnGradeCorrect) btnGradeCorrect.addEventListener('click', () => handleWritingGrading(true));
-
+  // B-4: 「もういっかい」ボタン
+  // 1回目：その場でもう一度書かせる（加点権利は消滅・ポイント0確定）
+  // 2回目 または れんしゅうモード時：次の問題へ進む
   const btnGradeRetry = document.getElementById('btn-grade-retry');
-  if (btnGradeRetry) btnGradeRetry.addEventListener('click', () => handleWritingGrading(false));
+  if (btnGradeRetry) {
+    btnGradeRetry.addEventListener('click', () => {
+      if (!writingQuestionRetried && !writingPracticeMode) {
+        SoundFx.playTap();
+        writingQuestionRetried = true;
+        writingQuestionPointsAllowed = false;
+        writingRewriteRemaining = 0; // もういっかい中は書き直し不要
+        WritingCanvas.clear();
+        document.getElementById('writing-grading-area').style.display = 'none';
+        document.getElementById('btn-writing-check-answer').style.display = 'block';
+        updateWritingOverlays(false);
+      } else {
+        handleWritingGrading(false);
+      }
+    });
+  }
 
   // ✍️ 漢字書き取り結果画面
   const btnWritingRetry = document.getElementById('btn-writing-result-retry');
