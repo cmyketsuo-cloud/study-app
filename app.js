@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v35)
+//  🌸 APP VERSION DEFINITION (v36)
 // =============================================
-const APP_VERSION_CODE = 'v35';
-const APP_VERSION_LABEL = '🌸 ばーじょん35 🌸';
+const APP_VERSION_CODE = 'v36';
+const APP_VERSION_LABEL = '🌸 ばーじょん36 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -1117,14 +1117,14 @@ function applyEarnedPoints(acc, { subjectKey, subjectName, historyTitle, request
         amount: actualEarnedPoints,
         date: Date.now()
       });
-
-      if (subjectName) {
-        recordStudyLog(acc, subjectKey, subjectName, totalQuestions, correctCount, actualEarnedPoints);
-      }
-
-      saveAccounts();
-      renderAccountScreen();
     }
+  }
+
+  // B-9: 学習ログ（カレンダー記録）は、ポイント獲得が0pt（れんしゅうモード等）であっても問題数があれば必ず記録する
+  if (acc && totalQuestions > 0 && subjectName) {
+    recordStudyLog(acc, subjectKey, subjectName, totalQuestions, correctCount, actualEarnedPoints);
+    saveAccounts();
+    renderAccountScreen();
   }
 
   return { actualEarnedPoints, limitNoticeText };
@@ -5147,6 +5147,7 @@ let writingPracticeReason = '';          // 'ai_off' | 'offline' | 'api_error'
 let writingQuestionRetried = false;      // B-4: その問題で「もういっかい」を実施中か
 let writingQuestionPointsAllowed = true; // B-4: その問題で加点対象か（2回目はfalse）
 let writingRewriteRemaining = 1;         // B-5: 「書き直す」残り可能回数（1問1回まで）
+let writingLastVerdict = null;           // B-8: 直前の判定結果 ('correct' | 'wrong' | 'practice' | null)
 
 function startWritingQuiz() {
   writingSessionFinished = false;
@@ -5167,6 +5168,7 @@ function startWritingQuiz() {
   writingCurrentIndex = 0;
   writingCorrectCount = 0;
   writingEarnedPoints = 0;
+  writingLastVerdict = null;
 
   // B-3: セッション開始時のれんしゅうモード判定（保護者設定OFF または オフライン）
   const isAiEnabled = localStorage.getItem('setting_ai_grading_enabled') !== 'false';
@@ -5208,10 +5210,18 @@ function renderWritingQuestion() {
   WritingCanvas.init();
   WritingCanvas.reset();
 
-  // B-4 & B-5: 1問ごとの状態リセット
+  // B-10: 一時的な通信エラー（api_error）によるれんしゅうモードは問題ごとに解除し、次の問題でAI判定を再試行する
+  // ※ 保護者設定OFF ('ai_off') または オフライン ('offline') によるれんしゅうモードは維持する
+  if (writingPracticeMode && writingPracticeReason === 'api_error') {
+    writingPracticeMode = false;
+    writingPracticeReason = '';
+  }
+
+  // B-4 & B-5 & B-8: 1問ごとの状態リセット
   writingQuestionRetried = false;
   writingQuestionPointsAllowed = !writingPracticeMode;
   writingRewriteRemaining = 1;
+  writingLastVerdict = null;
 
   // 上部プログレス
   document.getElementById('writing-quiz-step').textContent = `第 ${writingCurrentIndex + 1} 問 / ${writingQuestions.length} 問`;
@@ -5288,6 +5298,7 @@ async function checkWritingAnswer() {
       writingPracticeReason = 'offline';
     }
     writingQuestionPointsAllowed = false;
+    writingLastVerdict = 'practice';
 
     document.getElementById('btn-writing-check-answer').style.display = 'none';
     if (textEl) {
@@ -5341,6 +5352,7 @@ async function checkWritingAnswer() {
     writingPracticeMode = true;
     writingPracticeReason = 'api_error';
     writingQuestionPointsAllowed = false;
+    writingLastVerdict = 'practice';
 
     if (textEl) textEl.textContent = '【れんしゅう】';
     if (msgEl) {
@@ -5377,6 +5389,9 @@ async function checkWritingAnswer() {
   const match1 = candidates1.slice(0, candidateLimit).includes(targetKanji[0]);
   const match2 = isDouble ? candidates2.slice(0, candidateLimit).includes(targetKanji[1]) : true;
   const isCorrect = match1 && match2;
+
+  // B-8: 直前の判定結果を記録
+  writingLastVerdict = isCorrect ? 'correct' : 'wrong';
 
   if (textEl) {
     textEl.textContent = isDouble ? `【${char1}】【${char2}】` : `【${char1}】`;
@@ -5429,7 +5444,7 @@ async function checkWritingAnswer() {
 
   if (isCorrect) {
     SoundFx.playCorrect();
-    // 正解時は自動で1.2秒後に次へ
+    // 正解時は自動で1.2秒後に次へ（ボタンが押されなかった場合のフォールバック）
     if (writingTransitionTimer) clearTimeout(writingTransitionTimer);
     writingTransitionTimer = setTimeout(() => {
       writingTransitionTimer = null;
@@ -5498,15 +5513,15 @@ function showWritingResult(totalOverride) {
       resultNotice.textContent = '※ れんしゅうモードのためポイントはつきません';
     }
 
-    // 学習カレンダー・努力記録（練習回数としてカウント・獲得ポイントは0pt）
+    // B-9: 学習カレンダー・努力記録（練習問題数としてカウント・獲得ポイントは0pt・正解数は0で正答率を汚さない）
     const acc = accounts[currentAccountId];
     applyEarnedPoints(acc, {
       subjectKey: 'writing',
-      subjectName: '✍️ 漢字書き取り',
+      subjectName: '✍️ 漢字書き取り（れんしゅう）',
       historyTitle: `✍️ 漢字書き取り（れんしゅう・${total}問完了）`,
       requestedPoints: 0,
       totalQuestions: total,
-      correctCount: total
+      correctCount: 0
     });
 
     SoundFx.playFanfare();
@@ -6039,13 +6054,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // B-4: 「もういっかい」ボタン
-  // 1回目：その場でもう一度書かせる（加点権利は消滅・ポイント0確定）
-  // 2回目 または れんしゅうモード時：次の問題へ進む
+  // B-4 & B-8: 「もういっかい / つぎへ進む」ボタン
+  // ・直前が正解の場合：自動遷移タイマーを解除し、即座に正解として次へ進む（加点を落とさない）
+  // ・直前が不正解かつ1回目の場合：「もういっかい」処理（その場再試行・加点権利消滅）
+  // ・2回目 または れんしゅうモード時：次の問題へ進む
   const btnGradeRetry = document.getElementById('btn-grade-retry');
   if (btnGradeRetry) {
     btnGradeRetry.addEventListener('click', () => {
-      if (!writingQuestionRetried && !writingPracticeMode) {
+      // 進行中の自動遷移タイマーがあれば必ず解除（多重遷移・誤発火防止）
+      if (writingTransitionTimer) {
+        clearTimeout(writingTransitionTimer);
+        writingTransitionTimer = null;
+      }
+
+      if (writingLastVerdict === 'correct') {
+        // 正解直後に押された場合：即座に正解として次へ進む（加点を維持）
+        handleWritingGrading(true);
+      } else if (!writingQuestionRetried && !writingPracticeMode && writingLastVerdict === 'wrong') {
+        // 不正解かつ1回目の場合：「もういっかい」をその場で実行
         SoundFx.playTap();
         writingQuestionRetried = true;
         writingQuestionPointsAllowed = false;
@@ -6055,6 +6081,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-writing-check-answer').style.display = 'block';
         updateWritingOverlays(false);
       } else {
+        // 2回目終了時、またはれんしゅうモード時：次の問題へ進む
         handleWritingGrading(false);
       }
     });
