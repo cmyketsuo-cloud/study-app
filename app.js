@@ -4,10 +4,10 @@
  */
 
 // =============================================
-//  🌸 APP VERSION DEFINITION (v36)
+//  🌸 APP VERSION DEFINITION (v37)
 // =============================================
-const APP_VERSION_CODE = 'v36';
-const APP_VERSION_LABEL = '🌸 ばーじょん36 🌸';
+const APP_VERSION_CODE = 'v37';
+const APP_VERSION_LABEL = '🌸 ばーじょん37 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -5148,6 +5148,8 @@ let writingQuestionRetried = false;      // B-4: その問題で「もういっ�
 let writingQuestionPointsAllowed = true; // B-4: その問題で加点対象か（2回目はfalse）
 let writingRewriteRemaining = 1;         // B-5: 「書き直す」残り可能回数（1問1回まで）
 let writingLastVerdict = null;           // B-8: 直前の判定結果 ('correct' | 'wrong' | 'practice' | null)
+let writingPracticeQuestionCount = 0;    // B-11: セッション内でれんしゅう扱い（採点なし）となった問題数
+let writingGradedQuestionCount = 0;      // B-11: セッション内で実際にAI採点された問題数
 
 function startWritingQuiz() {
   writingSessionFinished = false;
@@ -5169,6 +5171,8 @@ function startWritingQuiz() {
   writingCorrectCount = 0;
   writingEarnedPoints = 0;
   writingLastVerdict = null;
+  writingPracticeQuestionCount = 0;
+  writingGradedQuestionCount = 0;
 
   // B-3: セッション開始時のれんしゅうモード判定（保護者設定OFF または オフライン）
   const isAiEnabled = localStorage.getItem('setting_ai_grading_enabled') !== 'false';
@@ -5466,10 +5470,17 @@ function handleWritingGrading(isCorrect) {
   const acc = accounts[currentAccountId];
   const pts = getPointPerQuestion(acc, 'writing');
 
-  // B-3 & B-4: 正解かつ加点許可（1回目かつれんしゅうモード外）の場合のみ加点
-  if (isCorrect && writingQuestionPointsAllowed && !writingPracticeMode) {
-    writingCorrectCount++;
-    writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
+  // B-11: れんしゅう扱いか、AI採点対象かを集計
+  const isPracticeThisQuestion = (writingPracticeMode || writingLastVerdict === 'practice');
+  if (isPracticeThisQuestion) {
+    writingPracticeQuestionCount++;
+  } else {
+    writingGradedQuestionCount++;
+    // 正解かつ加点許可（1回目）の場合のみ加点
+    if (isCorrect && writingQuestionPointsAllowed) {
+      writingCorrectCount++;
+      writingEarnedPoints = Math.round((writingEarnedPoints + pts) * 100) / 100;
+    }
   }
 
   writingCurrentIndex++;
@@ -5492,16 +5503,46 @@ function showWritingResult(totalOverride) {
     clearTimeout(writingTransitionTimer);
     writingTransitionTimer = null;
   }
+
+  // 回答総数
   const total = Math.max(writingCorrectCount, totalOverride !== undefined ? totalOverride : writingQuestions.length);
-  const pct = total > 0 ? Math.round((writingCorrectCount / total) * 100) : 0;
+
+  // B-11: 採点された問題が1問でもあったかどうかで表示を分ける
+  const isAllPractice = (writingGradedQuestionCount === 0);
+
+  // 採点された問題に対する正解率（採点問題がなければ0%）
+  const pct = writingGradedQuestionCount > 0
+    ? Math.round((writingCorrectCount / writingGradedQuestionCount) * 100)
+    : 0;
+
+  // 履歴タイトル
+  const historyTitle = isAllPractice
+    ? `✍️ 漢字書き取り（れんしゅう・${total}問完了）`
+    : (writingPracticeQuestionCount > 0
+        ? `✍️ 漢字書き取りドリル（${writingCorrectCount}/${writingGradedQuestionCount}問せいかい・うち${writingPracticeQuestionCount}問れんしゅう）`
+        : `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`);
+
+  // B-11: ポイント付与は練習モードかどうかに関わらず常に writingEarnedPoints を渡す
+  // （練習扱いだった問題では加点していないので、この値がそのまま正しい額になる）
+  // 学習カレンダーの correctCount は実際に正解と判定された数（writingCorrectCount）にする
+  const acc = accounts[currentAccountId];
+  const { actualEarnedPoints: actualEarned, limitNoticeText: limitNotice } = applyEarnedPoints(acc, {
+    subjectKey: 'writing',
+    subjectName: isAllPractice ? '✍️ 漢字書き取り（れんしゅう）' : '✍️ 漢字書き取り',
+    historyTitle: historyTitle,
+    requestedPoints: writingEarnedPoints,
+    totalQuestions: total,
+    correctCount: writingCorrectCount
+  });
 
   const resultTitle = document.getElementById('writing-result-title');
   const resultSubtitle = document.getElementById('writing-result-subtitle');
   const resultAccuracy = document.getElementById('writing-result-accuracy');
   const resultNotice = document.getElementById('writing-result-limit-notice');
 
-  // B-3: れんしゅうモード時の結果表示
-  if (writingPracticeMode) {
+  // B-11: 結果画面表示の切り替え
+  if (isAllPractice) {
+    // 全問がれんしゅうだった場合
     if (resultTitle) resultTitle.textContent = '📝 れんしゅう完了！';
     if (resultSubtitle) resultSubtitle.textContent = 'AIせんせいがおやすみだったけど、しっかり書く練習ができたね！';
     document.getElementById('writing-result-correct').textContent = total;
@@ -5513,39 +5554,30 @@ function showWritingResult(totalOverride) {
       resultNotice.textContent = '※ れんしゅうモードのためポイントはつきません';
     }
 
-    // B-9: 学習カレンダー・努力記録（練習問題数としてカウント・獲得ポイントは0pt・正解数は0で正答率を汚さない）
-    const acc = accounts[currentAccountId];
-    applyEarnedPoints(acc, {
-      subjectKey: 'writing',
-      subjectName: '✍️ 漢字書き取り（れんしゅう）',
-      historyTitle: `✍️ 漢字書き取り（れんしゅう・${total}問完了）`,
-      requestedPoints: 0,
-      totalQuestions: total,
-      correctCount: 0
-    });
-
     SoundFx.playFanfare();
     ConfettiFx.launch(50);
   } else {
+    // 採点された問題が1問以上あった場合：通常の結果表示
     document.getElementById('writing-result-correct').textContent = writingCorrectCount;
     document.getElementById('writing-result-total').textContent = total;
     if (resultAccuracy) resultAccuracy.textContent = `正解率 ${pct}%`;
-
-    // ポイント付与 & 保存（月間・日別上限判定）
-    const acc = accounts[currentAccountId];
-    const { actualEarnedPoints: actualEarned, limitNoticeText: limitNotice } = applyEarnedPoints(acc, {
-      subjectKey: 'writing',
-      subjectName: '✍️ 漢字書き取り',
-      historyTitle: `✍️ 漢字書き取りドリル（${writingCorrectCount}/${total}問せいかい）`,
-      requestedPoints: writingEarnedPoints,
-      totalQuestions: total,
-      correctCount: writingCorrectCount
-    });
-
     document.getElementById('writing-result-earned-points').textContent = formatPoints(actualEarned);
+
+    // 一部れんしゅう問題があった場合の補足表示
     if (resultNotice) {
-      resultNotice.style.display = limitNotice ? 'block' : 'none';
-      resultNotice.textContent = limitNotice;
+      let noticeMessages = [];
+      if (writingPracticeQuestionCount > 0) {
+        noticeMessages.push(`※ うち ${writingPracticeQuestionCount}問はれんしゅう（ポイントなし）`);
+      }
+      if (limitNotice) {
+        noticeMessages.push(limitNotice);
+      }
+      if (noticeMessages.length > 0) {
+        resultNotice.style.display = 'block';
+        resultNotice.textContent = noticeMessages.join(' / ');
+      } else {
+        resultNotice.style.display = 'none';
+      }
     }
 
     // 演出
@@ -5570,7 +5602,6 @@ function showWritingResult(totalOverride) {
   ConfettiFx.launch(writingCorrectCount >= writingQuestions.length ? 80 : 50);
 
   // 🏆 実績判定 & ポップアップ
-  const acc = accounts[currentAccountId];
   checkAndUnlockAchievements(acc);
   setTimeout(() => showPendingBadgePopups(), 600);
 }
