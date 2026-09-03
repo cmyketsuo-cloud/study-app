@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v42';
-const APP_VERSION_LABEL = '🌸 ばーじょん42 🌸';
+const APP_VERSION_CODE = 'v43';
+const APP_VERSION_LABEL = '🌸 ばーじょん43 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -3881,8 +3881,8 @@ const TYPING_COURSE_NAMES = {
   insane: '🔥 激激ムズムズ',
 };
 
-let typingSelectedWorld = 'chiikawa';
-let typingSelectedCourse = 'easy';
+let typingSelectedWorld = 'kintore';
+let typingSelectedCourse = 'yubitatefuse';
 let typingShowFingerGuide = true;
 
 let typingQuizList = [];
@@ -3919,6 +3919,8 @@ let typingInsaneTotalScore = 0;   // 激激ムズムズ クリア問題数カウ
  * ローマ字では 1 かな ≒ 2 キーストロークになることを考慮
  */
 function calcQuestionTime(kana, course) {
+  const world = TYPING_WORLDS[typingSelectedWorld];
+  if (world && world.isKintore) return 0;
   const timePerChar = TYPING_TIME_PER_CHAR[course] || 0;
   if (timePerChar === 0) return 0;
   // かな文字数（スペースのみ除外し、'…'等の打鍵が必要な記号も時間に反映）
@@ -4035,31 +4037,79 @@ function onTimeUp() {
 }
 
 
+let isKintoreMenuListenerSetup = false;
+function setupKintoreMenuListener() {
+  if (isKintoreMenuListenerSetup) return;
+  const grid = document.getElementById('typing-kintore-menu-grid');
+  if (!grid) return;
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.kintore-menu-btn');
+    if (!btn) return;
+    const menuId = btn.dataset.menuId;
+    if (!menuId) return;
+    typingSelectedCourse = menuId;
+    document.querySelectorAll('.kintore-menu-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.menuId === menuId);
+    });
+    const world = TYPING_WORLDS[typingSelectedWorld];
+    if (world && world.menu) {
+      const item = world.menu.find(m => m.id === menuId);
+      if (item) {
+        const descEl = document.getElementById('typing-world-desc');
+        if (descEl) descEl.textContent = item.desc;
+      }
+    }
+  });
+  isKintoreMenuListenerSetup = true;
+}
+
+function renderKintoreMenuGrid(world) {
+  const grid = document.getElementById('typing-kintore-menu-grid');
+  if (!grid || !world.menu) return;
+  grid.innerHTML = world.menu.map(m => `
+    <button class="kintore-menu-btn ${m.id === typingSelectedCourse ? 'active' : ''}" data-menu-id="${m.id}">
+      <span class="kintore-menu-emoji">${m.emoji}</span>
+      <span class="kintore-menu-label">${m.label}</span>
+    </button>
+  `).join('');
+}
+
+function updateTypingStartBadge() {
+  const badgeTag = document.getElementById('typing-start-badge-tag');
+  if (!badgeTag) return;
+  const world = TYPING_WORLDS[typingSelectedWorld];
+  if (world && world.isKintore) {
+    badgeTag.innerHTML = `💪 きそトレーニング（指ガイドつき）`;
+    badgeTag.style.background = '#f0f9ff';
+    badgeTag.style.color = '#0284c7';
+    badgeTag.style.borderColor = '#bae6fd';
+    return;
+  }
+  const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
+  const grade = getGradeForAccount(acc);
+  const isAdvancedGrade = grade >= 3;
+  if (isAdvancedGrade) {
+    badgeTag.innerHTML = `🔥 ${grade}年生: ローマ字アシストなし（日本語実践特訓！）`;
+    badgeTag.style.background = '#fef2f2';
+    badgeTag.style.color = '#dc2626';
+    badgeTag.style.borderColor = '#fecaca';
+  } else {
+    badgeTag.innerHTML = `🔰 ${grade}年生: ローマ字ガイド＆アシストつき`;
+    badgeTag.style.background = '#f0fdf4';
+    badgeTag.style.color = '#16a34a';
+    badgeTag.style.borderColor = '#bbf7d0';
+  }
+}
+
 function openTypingStart() {
   if (currentAccountId === null) return;
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
-  const grade = getGradeForAccount(acc);
-  const isAdvancedGrade = grade >= 3;
-
   document.getElementById('typing-start-account-name').textContent = `${acc.name}さん、`;
   document.getElementById('typing-start-points-display').textContent = formatPoints(acc.points || 0);
 
-  const badgeTag = document.getElementById('typing-start-badge-tag');
-  if (badgeTag) {
-    if (isAdvancedGrade) {
-      badgeTag.innerHTML = `🔥 ${grade}年生: ローマ字アシストなし（日本語実践特訓！）`;
-      badgeTag.style.background = '#fef2f2';
-      badgeTag.style.color = '#dc2626';
-      badgeTag.style.borderColor = '#fecaca';
-    } else {
-      badgeTag.innerHTML = `🔰 ${grade}年生: ローマ字ガイド＆アシストつき`;
-      badgeTag.style.background = '#f0fdf4';
-      badgeTag.style.color = '#16a34a';
-      badgeTag.style.borderColor = '#bbf7d0';
-    }
-  }
+  updateTypingStartBadge();
 
   // insane-warning の表示/非表示
   const insaneWarn = document.getElementById('insane-warning');
@@ -4072,7 +4122,7 @@ function openTypingStart() {
 }
 
 function switchTypingWorld(worldId) {
-  if (!TYPING_WORLDS[worldId]) worldId = 'chiikawa';
+  if (!TYPING_WORLDS[worldId]) worldId = 'kintore';
   typingSelectedWorld = worldId;
   const world = TYPING_WORLDS[worldId];
 
@@ -4081,10 +4131,39 @@ function switchTypingWorld(worldId) {
     btn.classList.toggle('active', btn.dataset.world === worldId);
   });
 
-  // ワールド説明カードの更新
-  document.getElementById('typing-world-icon').textContent = world.emoji;
-  document.getElementById('typing-world-name').textContent = world.name;
-  document.getElementById('typing-world-desc').textContent = world.desc;
+  const modeLabel = document.getElementById('typing-mode-label');
+  const courseButtons = document.getElementById('typing-course-buttons');
+  const kintoreGrid = document.getElementById('typing-kintore-menu-grid');
+  const insaneWarn = document.getElementById('insane-warning');
+
+  if (world.isKintore) {
+    if (modeLabel) modeLabel.textContent = '📋 きょうの メニュー';
+    if (courseButtons) courseButtons.style.display = 'none';
+    if (insaneWarn) insaneWarn.style.display = 'none';
+    if (kintoreGrid) {
+      kintoreGrid.style.display = 'grid';
+      typingSelectedCourse = world.menu?.[0]?.id || 'yubitatefuse';
+      renderKintoreMenuGrid(world);
+      setupKintoreMenuListener();
+    }
+    const firstItem = world.menu?.[0];
+    document.getElementById('typing-world-icon').textContent = world.emoji;
+    document.getElementById('typing-world-name').textContent = world.name;
+    document.getElementById('typing-world-desc').textContent = firstItem?.desc || world.desc;
+  } else {
+    if (modeLabel) modeLabel.textContent = '🎯 むずかしさをえらぶ';
+    if (kintoreGrid) kintoreGrid.style.display = 'none';
+    if (courseButtons) courseButtons.style.display = 'flex';
+    typingSelectedCourse = 'easy';
+    document.querySelectorAll('.typing-course-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.course === 'easy');
+    });
+    if (insaneWarn) insaneWarn.style.display = 'none';
+
+    document.getElementById('typing-world-icon').textContent = world.emoji;
+    document.getElementById('typing-world-name').textContent = world.name;
+    document.getElementById('typing-world-desc').textContent = world.desc;
+  }
 
   // テーマカラーとクラスの適用
   const startCard = document.getElementById('typing-start-card');
@@ -4095,17 +4174,26 @@ function switchTypingWorld(worldId) {
   if (startBtn) {
     startBtn.style.background = `linear-gradient(135deg, ${world.primaryColor}, #e11d48)`;
   }
+
+  updateTypingStartBadge();
 }
 
 function startTypingGame() {
   const world = TYPING_WORLDS[typingSelectedWorld];
-  const courseQuestions = (world.courses && world.courses[typingSelectedCourse]) || world.courses.easy;
-
-  // 出題リスト（シャッフルして激激ムズムズは全問、それ以外は8問）
-  const shuffled = [...courseQuestions].sort(() => Math.random() - 0.5);
-  typingQuizList = typingSelectedCourse === 'insane'
-    ? shuffled  // insaneは全問使用
-    : shuffled.slice(0, Math.min(8, shuffled.length));
+  let courseQuestions = [];
+  if (world && world.isKintore) {
+    const menuItem = world.menu?.find(m => m.id === typingSelectedCourse) || world.menu?.[0];
+    courseQuestions = menuItem ? menuItem.questions : [];
+    // 筋トレはシャッフルせず順番通り出題
+    typingQuizList = [...courseQuestions];
+  } else {
+    courseQuestions = (world.courses && world.courses[typingSelectedCourse]) || (world.courses && world.courses.easy) || [];
+    // 出題リスト（シャッフルして激激ムズムズは全問、それ以外は8問）
+    const shuffled = [...courseQuestions].sort(() => Math.random() - 0.5);
+    typingQuizList = typingSelectedCourse === 'insane'
+      ? shuffled  // insaneは全問使用
+      : shuffled.slice(0, Math.min(8, shuffled.length));
+  }
 
   typingCurrentIndex = 0;
   typingSessionFinished = false;
@@ -4134,16 +4222,23 @@ function startTypingGame() {
   const tagEl = document.getElementById('typing-quiz-world-tag');
   if (tagEl) tagEl.textContent = `${world.emoji} ${world.name.split(' ')[0]}`;
 
+  // スキップボタン（G-2-8: 筋トレ中は非表示、ちいかわ・スイーツは表示）
+  const skipBtn = document.getElementById('btn-typing-skip');
+  if (skipBtn) {
+    skipBtn.style.display = (world && world.isKintore) ? 'none' : 'inline-flex';
+  }
+
   // テーマクラスの適用
   const stageCard = document.getElementById('typing-stage-card');
   if (stageCard) {
     stageCard.className = `typing-stage-card pop-card ${world.themeClass}${typingSelectedCourse === 'insane' ? ' insane-mode' : ''}`;
   }
 
-  // 指ガイドの表示/非表示
+  // 指ガイドの表示/非表示 ＆ 画面キーボードのタップ無効化（G-2-6）
   const kbCard = document.getElementById('typing-keyboard-card');
   if (kbCard) {
     kbCard.style.display = typingShowFingerGuide ? 'block' : 'none';
+    kbCard.classList.toggle('kintore-no-tap', !!(world && world.isKintore));
   }
 
   setupTypingQuestion();
@@ -4222,9 +4317,16 @@ function setupTypingQuestion() {
 function updateTypingDisplay() {
   if (typingNodeIndex >= typingPatternNodes.length) return;
 
-  const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
-  const grade = getGradeForAccount(acc);
-  const isAdvancedGrade = grade >= 3;
+  const world = TYPING_WORLDS[typingSelectedWorld];
+  let showGuide = true;
+  if (world && world.isKintore) {
+    const menuItem = world.menu?.find(m => m.id === typingSelectedCourse) || world.menu?.[0];
+    showGuide = menuItem ? !!menuItem.guide : true;
+  } else {
+    const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
+    const grade = getGradeForAccount(acc);
+    showGuide = grade < 3;
+  }
 
   const node = typingPatternNodes[typingNodeIndex];
   const candidate = typingCurrentCandidate;
@@ -4243,8 +4345,8 @@ function updateTypingDisplay() {
   const remainEl = document.getElementById('romaji-remain');
   const romajiBox = document.getElementById('typing-romaji-box');
 
-  if (isAdvancedGrade) {
-    // 🔥 3年生以上: 打つべきローマ字アシスト（next / remain）を完全非表示
+  if (!showGuide) {
+    // 🔥 3年生以上（通常ワールド）: 打つべきローマ字アシスト（next / remain）を完全非表示
     if (nextEl) nextEl.textContent = '';
     if (remainEl) remainEl.textContent = '';
     if (romajiBox) {
@@ -4253,7 +4355,7 @@ function updateTypingDisplay() {
     // キーボードの光るキーガイドもオフ（自力で打鍵）
     updateKeyboardGuide(null);
   } else {
-    // 🔰 1・2年生: ローマ字ガイド＆アシストを表示
+    // 🔰 1・2年生（通常ワールド）または筋トレ（全学年）: ローマ字ガイド＆アシストを表示
     if (nextEl) nextEl.textContent = nextChar;
     if (remainEl) remainEl.textContent = remainRest;
     if (romajiBox) {
@@ -4430,14 +4532,17 @@ function handleQuestionComplete() {
 
   // ポイントプレビュー（セッション中の暫定）
   let previewPts = 0;
-  if (typingSelectedCourse === 'easy') previewPts = 0.1;
+  if (world && world.isKintore) {
+    const menuItem = world.menu?.find(m => m.id === typingSelectedCourse) || world.menu?.[0];
+    previewPts = menuItem?.pointPerQ ?? 0.1;
+  } else if (typingSelectedCourse === 'easy') previewPts = 0.1;
   else if (typingSelectedCourse === 'normal') previewPts = 0.3;
   else if (typingSelectedCourse === 'hard') previewPts = 0.7;
   else if (typingSelectedCourse === 'insane') previewPts = 0; // 全問クリア後に確定
   typingSessionPoints += previewPts;
   const pointsEl = document.getElementById('typing-session-points');
   if (pointsEl && typingSelectedCourse !== 'insane') {
-    pointsEl.textContent = typingSessionPoints.toFixed(1);
+    pointsEl.textContent = formatPoints(typingSessionPoints);
   }
 
   // 正解エフェクト
@@ -4465,11 +4570,12 @@ function handleQuestionComplete() {
 
 function skipTypingQuestion() {
   if (isTypingInputBlocked) return;
+  const world = TYPING_WORLDS[typingSelectedWorld];
+  if (world && world.isKintore) return; // 筋トレはスキップ不可
   SoundFx.playTap();
   stopQuestionTimer();
 
-  const world = TYPING_WORLDS[typingSelectedWorld];
-  const pool = (world.courses && world.courses[typingSelectedCourse]) || world.courses.easy;
+  const pool = (world.courses && world.courses[typingSelectedCourse]) || (world.courses && world.courses.easy) || [];
   const unused = pool.filter(item => !typingQuizList.some(q => q.kanji === item.kanji));
   if (unused.length > 0) {
     const newQ = shuffle(unused)[0];
@@ -4500,10 +4606,16 @@ function finishTypingQuiz(totalOverride) {
   else rank = 'C';
 
   const totalQ = totalOverride !== undefined ? totalOverride : typingQuizList.length;
+  const world = TYPING_WORLDS[typingSelectedWorld];
 
-  // 獲得ポイント（難易度コース × 達成ランクの傾斜ポイント設計）
+  // 獲得ポイント（難易度コース × 達成ランクの傾斜ポイント設計、筋トレは pointPerQ × 正解数）
   let basePoints = 0;
-  if (typingSelectedCourse === 'insane') {
+  let menuItem = null;
+  if (world && world.isKintore) {
+    menuItem = world.menu?.find(m => m.id === typingSelectedCourse) || world.menu?.[0];
+    const ptPerQ = menuItem?.pointPerQ ?? 0.1;
+    basePoints = Math.round(ptPerQ * totalQ * 100) / 100;
+  } else if (typingSelectedCourse === 'insane') {
     // 激激ムズムズ: 全問ノーミスクリアのみ 1.8pt、失敗または途中終了は0pt
     basePoints = (!typingInsaneFailed && typingInsaneTotalScore >= typingQuizList.length && totalOverride === undefined)
       ? TYPING_POINT_TABLE.insane.CLEAR
@@ -4520,24 +4632,46 @@ function finishTypingQuiz(totalOverride) {
   // ポイント通帳への加算処理（上限チェック）
   const acc = (currentAccountId !== null) ? accounts[currentAccountId] : null;
   const courseName = TYPING_COURSE_NAMES[typingSelectedCourse] || '激ムズ';
+  const historyTitle = (world && world.isKintore)
+    ? `⌨️ タイピング筋トレ (${menuItem?.label || 'ゆびたてふせ'})`
+    : `⌨️ タイピング特訓 (${world.name} / ${courseName} ランク${rank})`;
+  const subjectName = (world && world.isKintore)
+    ? '⌨️ タイピング筋トレ'
+    : `⌨️ タイピング (${world.name})`;
+
   const { actualEarnedPoints, limitNoticeText } = applyEarnedPoints(acc, {
     subjectKey: 'typing',
-    subjectName: `⌨️ タイピング (${TYPING_WORLDS[typingSelectedWorld].name})`,
-    historyTitle: `⌨️ タイピング特訓 (${TYPING_WORLDS[typingSelectedWorld].name} / ${courseName} ランク${rank})`,
+    subjectName: subjectName,
+    historyTitle: historyTitle,
     requestedPoints: basePoints,
     totalQuestions: totalQ,
     correctCount: totalQ
   });
 
   // 結果画面UIの反映
-  const world = TYPING_WORLDS[typingSelectedWorld];
-  document.getElementById('typing-result-rank').textContent = rank;
+  const rankLabelEl = document.getElementById('typing-result-rank-label');
+  const rankValEl = document.getElementById('typing-result-rank');
+  if (world && world.isKintore) {
+    if (rankLabelEl) rankLabelEl.textContent = '種目';
+    if (rankValEl) {
+      rankValEl.textContent = menuItem?.label || 'ゆびたてふせ';
+      rankValEl.classList.add('kintore-menu-val');
+    }
+    document.getElementById('typing-result-subtitle').textContent =
+      typingMissCount === 0 ? `ノーミスかんぺき！${world.sounds.finish}` : `ナイスファイト！${world.sounds.finish}`;
+  } else {
+    if (rankLabelEl) rankLabelEl.textContent = '総合ランク';
+    if (rankValEl) {
+      rankValEl.textContent = rank;
+      rankValEl.classList.remove('kintore-menu-val');
+    }
+    document.getElementById('typing-result-subtitle').textContent = 
+      rank === 'S' ? `神技！${world.sounds.finish}` : (rank === 'A' ? `すばらしい！${world.sounds.finish}` : 'ナイスファイト！よくがんばったね！');
+  }
+
   document.getElementById('typing-result-wpm').textContent = wpm;
   document.getElementById('typing-result-acc').textContent = accuracy;
   document.getElementById('typing-result-maxcombo').textContent = typingMaxCombo;
-
-  document.getElementById('typing-result-subtitle').textContent = 
-    rank === 'S' ? `神技！${world.sounds.finish}` : (rank === 'A' ? `すばらしい！${world.sounds.finish}` : 'ナイスファイト！よくがんばったね！');
 
   const currentTotalPoints = acc ? (acc.points || 0) : 0;
   const bookEquiv = calcBookEquiv(currentTotalPoints);
@@ -4559,7 +4693,7 @@ function finishTypingQuiz(totalOverride) {
 
   showScreen('screen-typing-result');
   SoundFx.playFanfare();
-  if (rank === 'S' || rank === 'A') {
+  if (rank === 'S' || rank === 'A' || (world && world.isKintore && typingMissCount === 0)) {
     ConfettiFx.launch(70);
   }
 
@@ -6379,9 +6513,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 画面キーボードのタッチ・クリック入力
+  // 画面キーボードのタッチ・クリック入力（筋トレ中は物理キーボード必須のため無効）
   document.querySelectorAll('.kb-key[data-char]').forEach(btn => {
     btn.addEventListener('click', () => {
+      const world = TYPING_WORLDS[typingSelectedWorld];
+      if (world && world.isKintore) return;
       handleTypingInput(btn.dataset.char);
     });
   });

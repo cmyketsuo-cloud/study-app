@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん42 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん43 🌸</span>
       </div>
     </div>
   </div>
@@ -357,10 +357,10 @@
           </div>
           <div class="subject-icon pop-bounce">⌨️</div>
           <h3 class="subject-title">ローマ字タイピング</h3>
-          <p class="subject-desc">ちいかわ・RPG・スイーツ寿司打の3ワールド！指ガイド付きでサクサク！</p>
+          <p class="subject-desc">ちいかわ・スイーツ寿司打・タイピング筋トレの3ワールド！指ガイド付き！</p>
           <div class="subject-meta">
             <span>🎯 ローマ字・単語</span>
-            <span class="subject-badge-ready" style="background:#fce7f3;color:#be185d;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #fbcfe8;font-size:0.75rem;">🧁 3ワールド選択</span>
+            <span class="subject-badge-ready" style="background:#e0f2fe;color:#0369a1;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #bae6fd;font-size:0.75rem;">💪 きそから じっくり</span>
           </div>
           <button class="btn-subject-start btn-pop-primary btn-typing-theme" id="btn-portal-typing">
             <span>🚀</span> タイピングをはじめる！
@@ -392,7 +392,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん42 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん43 🌸</span>
       </div>
     </div>
   </div>
@@ -879,17 +879,17 @@
         <span>すきな世界をえらんでスタート！</span>
       </p>
 
-      <!-- 3つの選べるワールド切り替えタブ -->
+      <!-- 選べるワールド切り替えタブ -->
       <div class="world-tab-selector">
         <p class="world-tab-label">🌟 あそぶ世界をえらんでね</p>
         <div class="world-tab-grid">
-          <button class="world-tab-btn active" data-world="chiikawa" id="tab-world-chiikawa">
+          <button class="world-tab-btn active" data-world="kintore" id="tab-world-kintore">
+            <span class="w-tab-icon">💪</span>
+            <span class="w-tab-title">筋トレ<br><small>きそトレーニング</small></span>
+          </button>
+          <button class="world-tab-btn" data-world="chiikawa" id="tab-world-chiikawa">
             <span class="w-tab-icon">🧁</span>
             <span class="w-tab-title">ちいかわ<br><small>おやつ集め</small></span>
-          </button>
-          <button class="world-tab-btn" data-world="rpg" id="tab-world-rpg">
-            <span class="w-tab-icon">⚔️</span>
-            <span class="w-tab-title">RPG討伐<br><small>モンスターバトル</small></span>
           </button>
           <button class="world-tab-btn" data-world="sweets" id="tab-world-sweets">
             <span class="w-tab-icon">🍣</span>
@@ -911,13 +911,14 @@
 
       <!-- コース・難易度選択 -->
       <div class="mode-selector">
-        <p class="mode-label">🎯 むずかしさをえらぶ</p>
-        <div class="mode-buttons" role="group" aria-label="難易度の選択">
+        <p class="mode-label" id="typing-mode-label">📋 きょうの メニュー</p>
+        <div class="mode-buttons" role="group" aria-label="難易度の選択" id="typing-course-buttons" style="display:none;">
           <button class="mode-btn pop-btn typing-course-btn active" data-course="easy" id="typing-course-easy">🐣 かんたん</button>
           <button class="mode-btn pop-btn typing-course-btn" data-course="normal" id="typing-course-normal">🐥 ふつう</button>
           <button class="mode-btn pop-btn typing-course-btn" data-course="hard" id="typing-course-hard">🦅 激ムズ</button>
           <button class="mode-btn pop-btn typing-course-btn btn-insane" data-course="insane" id="typing-course-insane">🔥 激激ムズムズ</button>
         </div>
+        <div class="kintore-menu-grid" id="typing-kintore-menu-grid" role="group" aria-label="筋トレ種目の選択"></div>
         <div class="insane-warning" id="insane-warning" style="display:none;">
           ⚡ 超高速タイムアタック！1文字ミスで即ゲームオーバー！でも大量ポイントGET！
         </div>
@@ -1110,7 +1111,7 @@
       <!-- ランク ＆ 速度統計ブロック -->
       <div class="typing-stats-grid">
         <div class="typing-stat-box rank-box">
-          <div class="t-stat-label">総合ランク</div>
+          <div class="t-stat-label" id="typing-result-rank-label">総合ランク</div>
           <div class="t-stat-val rank-val" id="typing-result-rank">S</div>
         </div>
         <div class="typing-stat-box">
@@ -1922,11 +1923,11 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260902_v42"></script>
-  <script src="writing_data.js?v=20260902_v42"></script>
-  <script src="math_data.js?v=20260902_v42"></script>
-  <script src="typing_data.js?v=20260902_v42"></script>
-  <script src="kana_data.js?v=20260902_v42"></script>
-  <script src="app.js?v=20260902_v42"></script>
+  <script src="quiz_data.js?v=20260903_v43"></script>
+  <script src="writing_data.js?v=20260903_v43"></script>
+  <script src="math_data.js?v=20260903_v43"></script>
+  <script src="typing_data.js?v=20260903_v43"></script>
+  <script src="kana_data.js?v=20260903_v43"></script>
+  <script src="app.js?v=20260903_v43"></script>
 </body>
 </html>

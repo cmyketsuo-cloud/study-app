@@ -3821,6 +3821,61 @@ body {
   transform: translateY(-2px) scale(1.05);
 }
 
+/* 筋トレ種目選択グリッド */
+.kintore-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+@media (min-width: 480px) {
+  .kintore-menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  }
+}
+.kintore-menu-btn {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.4rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #334155;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .kintore-menu-btn:hover {
+    transform: translateY(-2px);
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+  }
+}
+.kintore-menu-btn:active {
+  transform: scale(0.96);
+}
+.kintore-menu-btn.active {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
+  color: #0284c7;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+.kintore-menu-emoji {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.kintore-menu-label {
+  font-size: 0.8rem;
+  text-align: center;
+  word-break: keep-all;
+  line-height: 1.2;
+}
+
 .typing-toggle-row {
   display: flex;
   align-items: center;
@@ -4227,6 +4282,37 @@ body {
 }
 
 /* Typing World Themes */
+/* 💪 Typing Kintore */
+.typing-stage-card.world-kintore {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+  border: 3px solid #bae6fd;
+  box-shadow: 0 12px 32px rgba(14, 165, 233, 0.12);
+}
+.typing-stage-card.world-kintore .typing-speech-bubble {
+  background: #f0f9ff;
+  border-color: #38bdf8;
+  color: #0369a1;
+}
+.typing-stage-card.world-kintore .typing-speech-bubble::before {
+  border-color: transparent #38bdf8 transparent transparent;
+}
+.typing-stage-card.world-kintore .typing-target-box {
+  background: #f8fafc;
+  border-color: #bae6fd;
+}
+
+/* 筋トレ中の画面キーボード（指位置確認用・タップ入力無効） */
+.typing-keyboard-card.kintore-no-tap .kb-key {
+  cursor: default;
+}
+
+/* 結果画面の種目名表示フォント縮小 */
+.rank-val.kintore-menu-val {
+  font-size: 1.15rem !important;
+  word-break: break-all;
+  line-height: 1.2;
+}
+
 /* 🧁 Chiikawa */
 .typing-stage-card.world-chiikawa {
   background: linear-gradient(180deg, #ffffff 0%, #fff1f2 100%);
@@ -4236,43 +4322,6 @@ body {
 .typing-stage-card.world-chiikawa .typing-target-box {
   background: #fff5f7;
   border-color: #fecdd3;
-}
-
-/* ⚔️ RPG Fantasy */
-.typing-stage-card.world-rpg {
-  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
-  border: 3px solid #6366f1;
-  box-shadow: 0 12px 36px rgba(99, 102, 241, 0.35);
-  color: #ffffff;
-}
-.typing-stage-card.world-rpg .typing-speech-bubble {
-  background: #312e81;
-  border-color: #818cf8;
-  color: #e0e7ff;
-}
-.typing-stage-card.world-rpg .typing-speech-bubble::before {
-  border-color: transparent #818cf8 transparent transparent;
-}
-.typing-stage-card.world-rpg .typing-target-box {
-  background: rgba(30, 27, 75, 0.85);
-  border: 2px solid #4f46e5;
-}
-.typing-stage-card.world-rpg .typing-target-kanji {
-  color: #f8fafc;
-  text-shadow: 0 2px 10px rgba(99, 102, 241, 0.6);
-}
-.typing-stage-card.world-rpg .typing-target-kana {
-  color: #a5b4fc;
-}
-.typing-stage-card.world-rpg .typing-romaji-box {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: #4338ca;
-}
-.typing-stage-card.world-rpg .romaji-remain {
-  color: #cbd5e1;
-}
-.typing-stage-card.world-rpg .typing-hint-text {
-  color: #c7d2fe;
 }
 
 /* 🍣 Sweets SushiDa */

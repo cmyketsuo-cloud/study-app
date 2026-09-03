@@ -1,6 +1,6 @@
 /**
  * わくわく学習アプリ - タイピング練習エンジン ＆ お題データ (typing_data.js)
- * 3つの選べるワールド（ちいかわ・RPGモンスター討伐・スイーツ寿司打）
+ * 3つの選べるワールド（タイピング筋トレ・ちいかわ・スイーツ寿司打）
  * 柔軟なローマ字入力オートマトン（shi/si, tsu/tu, fu/hu, ji/zi, sha/sya, nn/n 対応）
  */
 
@@ -80,7 +80,179 @@ const ROMAJI_TABLE = {
 //  3つの選べるワールド お題データセット
 // =============================================
 const TYPING_WORLDS = {
-  // 🧁 ワールドA: ちいかわ おやつ集め
+  // 💪 ワールドA: タイピング筋トレ
+  kintore: {
+    id: 'kintore',
+    name: 'タイピング筋トレ',
+    emoji: '💪',
+    badge: 'きそトレーニング',
+    themeClass: 'world-kintore',
+    bgGradient: 'linear-gradient(135deg,#f8fafc 0%,#e2e8f0 55%,#cbd5e1 100%)',
+    primaryColor: '#0ea5e9',
+    desc: 'ゆびの きそトレーニング。1もじずつ、ぜんぶの ゆびで うてるように なろう！',
+    sounds: { success: 'ナイス！', streak: 'いい ちょうし！', finish: 'トレーニング しゅうりょう！' },
+    isKintore: true,
+    menu: [
+      {
+        id: 'yubitatefuse',
+        label: 'ゆびたてふせ',
+        emoji: '🖐️',
+        desc: 'ぼいん5つ。ぜんぶの ゆびの ばしょを おぼえよう',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'あ', kana: 'あ', hint: 'a ／ ひだりての こゆび' },
+          { kanji: 'い', kana: 'い', hint: 'i ／ みぎての なかゆび' },
+          { kanji: 'う', kana: 'う', hint: 'u ／ みぎての ひとさしゆび' },
+          { kanji: 'え', kana: 'え', hint: 'e ／ ひだりての なかゆび' },
+          { kanji: 'お', kana: 'お', hint: 'o ／ みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'calf',
+        label: 'カーフレイズ',
+        emoji: '🦵',
+        desc: 'K は みぎての なかゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'か', kana: 'か', hint: 'ka ／ さいごは ひだりての こゆび' },
+          { kanji: 'き', kana: 'き', hint: 'ki ／ さいごは みぎての なかゆび' },
+          { kanji: 'く', kana: 'く', hint: 'ku ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'け', kana: 'け', hint: 'ke ／ さいごは ひだりての なかゆび' },
+          { kanji: 'こ', kana: 'こ', hint: 'ko ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'sidebend',
+        label: 'サイドベンド',
+        emoji: '🤸',
+        desc: 'S は ひだりての くすりゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'さ', kana: 'さ', hint: 'sa ／ さいごは ひだりての こゆび' },
+          { kanji: 'し', kana: 'し', hint: 'si ／ さいごは みぎての なかゆび' },
+          { kanji: 'す', kana: 'す', hint: 'su ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'せ', kana: 'せ', hint: 'se ／ さいごは ひだりての なかゆび' },
+          { kanji: 'そ', kana: 'そ', hint: 'so ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'turkish',
+        label: 'ターキッシュゲットアップ',
+        emoji: '🏋️',
+        desc: 'T は ひだりての ひとさしゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'た', kana: 'た', hint: 'ta ／ さいごは ひだりての こゆび' },
+          { kanji: 'ち', kana: 'ち', hint: 'ti ／ さいごは みぎての なかゆび' },
+          { kanji: 'つ', kana: 'つ', hint: 'tu ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'て', kana: 'て', hint: 'te ／ さいごは ひだりての なかゆび' },
+          { kanji: 'と', kana: 'と', hint: 'to ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'narrowpush',
+        label: 'ナロープッシュアップ',
+        emoji: '💪',
+        desc: 'N は みぎての ひとさしゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'な', kana: 'な', hint: 'na ／ さいごは ひだりての こゆび' },
+          { kanji: 'に', kana: 'に', hint: 'ni ／ さいごは みぎての なかゆび' },
+          { kanji: 'ぬ', kana: 'ぬ', hint: 'nu ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'ね', kana: 'ね', hint: 'ne ／ さいごは ひだりての なかゆび' },
+          { kanji: 'の', kana: 'の', hint: 'no ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'halfsquat',
+        label: 'ハーフスクワット',
+        emoji: '🦿',
+        desc: 'H は みぎての ひとさしゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'は', kana: 'は', hint: 'ha ／ さいごは ひだりての こゆび' },
+          { kanji: 'ひ', kana: 'ひ', hint: 'hi ／ さいごは みぎての なかゆび' },
+          { kanji: 'ふ', kana: 'ふ', hint: 'hu ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'へ', kana: 'へ', hint: 'he ／ さいごは ひだりての なかゆび' },
+          { kanji: 'ほ', kana: 'ほ', hint: 'ho ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'mountain',
+        label: 'マウンテンクライマー',
+        emoji: '⛰️',
+        desc: 'M は みぎての なかゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'ま', kana: 'ま', hint: 'ma ／ さいごは ひだりての こゆび' },
+          { kanji: 'み', kana: 'み', hint: 'mi ／ さいごは みぎての なかゆび' },
+          { kanji: 'む', kana: 'む', hint: 'mu ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'め', kana: 'め', hint: 'me ／ さいごは ひだりての なかゆび' },
+          { kanji: 'も', kana: 'も', hint: 'mo ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'yarddash',
+        label: 'ヤードダッシュ',
+        emoji: '🏃',
+        desc: 'Y は みぎての ひとさしゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'や', kana: 'や', hint: 'ya ／ さいごは ひだりての こゆび' },
+          { kanji: 'ゆ', kana: 'ゆ', hint: 'yu ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'よ', kana: 'よ', hint: 'yo ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'lunge',
+        label: 'ランジ',
+        emoji: '🚶',
+        desc: 'R は ひだりての ひとさしゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'ら', kana: 'ら', hint: 'ra ／ さいごは ひだりての こゆび' },
+          { kanji: 'り', kana: 'り', hint: 'ri ／ さいごは みぎての なかゆび' },
+          { kanji: 'る', kana: 'る', hint: 'ru ／ さいごは みぎての ひとさしゆび' },
+          { kanji: 'れ', kana: 'れ', hint: 're ／ さいごは ひだりての なかゆび' },
+          { kanji: 'ろ', kana: 'ろ', hint: 'ro ／ さいごは みぎての くすりゆび' }
+        ]
+      },
+      {
+        id: 'widesquat',
+        label: 'ワイドスクワット',
+        emoji: '🧎',
+        desc: 'W は ひだりての くすりゆび',
+        guide: true,
+        timePerChar: 0,
+        pointPerQ: 0.1,
+        questions: [
+          { kanji: 'わ', kana: 'わ', hint: 'wa ／ さいごは ひだりての こゆび' },
+          { kanji: 'を', kana: 'を', hint: 'wo ／ さいごは みぎての くすりゆび' },
+          { kanji: 'ん', kana: 'ん', hint: 'nn ／ N を 2かい' }
+        ]
+      }
+    ]
+  },
+
+  // 🧁 ワールドB: ちいかわ おやつ集め
   chiikawa: {
     id: 'chiikawa',
     name: 'ちいかわ おやつ集め',
@@ -126,49 +298,7 @@ const TYPING_WORLDS = {
     }
   },
 
-  // ⚔️ ワールドB: RPGモンスター討伐
-  rpg: {
-    id: 'rpg',
-    name: 'RPGモンスター討伐',
-    emoji: '⚔️',
-    badge: 'バトルRPG',
-    themeClass: 'world-rpg',
-    bgGradient: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
-    primaryColor: '#6366f1',
-    desc: 'タイプしてモンスターを攻撃！漢字ドリル連動の言葉で大ダメージ！',
-    sounds: { success: 'こうげき！', streak: 'クリティカルヒット！', finish: 'クエストクリア！' },
-    courses: {
-      easy: [
-        { kanji: '勇気', kana: 'ゆうき', hint: '立ち向かう強い心' },
-        { kanji: '魔法', kana: 'まほう', hint: '不思議な力' },
-        { kanji: '剣士', kana: 'けんし', hint: '剣でたたかう戦士' },
-        { kanji: '宝箱', kana: 'たからばこ', hint: 'お宝がねむる箱' },
-        { kanji: '炎', kana: 'ほのお', hint: 'あつく燃える火' },
-        { kanji: '盾', kana: 'たて', hint: '攻撃をふせぐ防具' },
-        { kanji: '冒険', kana: 'ぼうけん', hint: '未知の世界への旅' },
-      ],
-      normal: [
-        { kanji: '世界遺産', kana: 'せかいいさん', hint: '人類共通の宝物' },
-        { kanji: '地球の環境', kana: 'ちきゅうのかんきょう', hint: '自然を大切に守る' },
-        { kanji: 'ほのおのつるぎ', kana: 'ほのおのつるぎ', hint: '赤く燃え盛る伝説の武器' },
-        { kanji: 'ひかりのまほう', kana: 'ひかりのまほう', hint: '闇を照らす聖なるチカラ' },
-        { kanji: '冷静沈着に対処', kana: 'れいせいちんちゃくにていしょ', hint: 'ピンチでも落ち着く' },
-        { kanji: '日進月歩の進化', kana: 'にっしんげっぽのしんか', hint: 'めざましい成長と発展' },
-      ],
-      hard: [
-        { kanji: 'ドラゴンをたおしてへいわをとりもどす', kana: 'どらごんをたおしてへいわをとりもどす', hint: '勇者の大冒険クライマックス' },
-        { kanji: 'いっしょうけんめい努力してレベルアップ', kana: 'いっしょうけんめいどりょくしてれべるあっぷ', hint: '日々の積み重ねが力になる' },
-        { kanji: '仲間と力をあわせて最強のボスにいどむ', kana: 'なかまとちからをあわせてさいきょうのぼすにいどむ', hint: 'チームワークで勝利をつかめ' },
-      ],
-      insane: [
-        { kanji: 'ドラゴンをたおしてへいわをとりもどす', kana: 'どらごんをたおしてへいわをとりもどす', hint: '勇者の大冒険クライマックス' },
-        { kanji: 'いっしょうけんめい努力してレベルアップ', kana: 'いっしょうけんめいどりょくしてれべるあっぷ', hint: '日々の積み重ねが力になる' },
-        { kanji: '仲間と力をあわせて最強のボスにいどむ', kana: 'なかまとちからをあわせてさいきょうのぼすにいどむ', hint: 'チームワークで勝利をつかめ' },
-      ]
-    }
-  },
-
-  // 🍣 ワールドC: スイーツ寿司打パフェ
+  // 🍣 ワールドB: スイーツ寿司打パフェ
   sweets: {
     id: 'sweets',
     name: 'スイーツ寿司打パフェ',
