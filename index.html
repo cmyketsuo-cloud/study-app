@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん43 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん44 🌸</span>
       </div>
     </div>
   </div>
@@ -389,10 +389,46 @@
             </button>
           </div>
         </div>
+
+        <!-- 🔬 理科クイズ（5年生限定） -->
+        <div class="subject-card pop-card subject-science" id="card-subject-science" style="display:none;">
+          <div class="subject-card-header">
+            <span class="subject-badge science">🔬 理科</span>
+            <span class="subject-points-hint" id="portal-science-pts-hint">🪙 1.0pt/問</span>
+          </div>
+          <div class="subject-icon pop-bounce">🔬</div>
+          <h3 class="subject-title">理科クイズ</h3>
+          <p class="subject-desc">もののとけ方・植物の発芽・流れる水・天気の変化など！10問クイズ！</p>
+          <div class="subject-meta">
+            <span>🌱 実験・観察・自然</span>
+            <span class="subject-badge-ready" style="background:#ccfbf1;color:#0f766e;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #99f6e4;font-size:0.75rem;">🌟 5年生対応</span>
+          </div>
+          <button class="btn-subject-start btn-pop-primary btn-science-theme" id="btn-portal-science">
+            <span>🚀</span> 理科クイズをはじめる！
+          </button>
+        </div>
+
+        <!-- 🌏 社会クイズ（5年生限定） -->
+        <div class="subject-card pop-card subject-society" id="card-subject-society" style="display:none;">
+          <div class="subject-card-header">
+            <span class="subject-badge society">🌏 社会</span>
+            <span class="subject-points-hint" id="portal-society-pts-hint">🪙 1.0pt/問</span>
+          </div>
+          <div class="subject-icon pop-bounce">🌏</div>
+          <h3 class="subject-title">社会クイズ</h3>
+          <p class="subject-desc">日本の国土・食料生産・工業・情報社会・自然環境を守るくらし！</p>
+          <div class="subject-meta">
+            <span>🗾 国土・産業・くらし</span>
+            <span class="subject-badge-ready" style="background:#e0f2fe;color:#0369a1;font-weight:800;padding:0.2rem 0.6rem;border-radius:12px;border:1px solid #bae6fd;font-size:0.75rem;">🌟 5年生対応</span>
+          </div>
+          <button class="btn-subject-start btn-pop-primary btn-society-theme" id="btn-portal-society">
+            <span>🚀</span> 社会クイズをはじめる！
+          </button>
+        </div>
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん43 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん44 🌸</span>
       </div>
     </div>
   </div>
@@ -1600,6 +1636,20 @@
                     <span>pt</span>
                   </div>
                 </div>
+                <div class="weight-item">
+                  <label for="cfg-weight-science">🔬 理科クイズ（選択式）:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-science" class="form-input pop-input-sm" value="1.0" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
+                <div class="weight-item">
+                  <label for="cfg-weight-society">🌏 社会クイズ（選択式）:</label>
+                  <div class="weight-input-wrap">
+                    <input type="number" id="cfg-weight-society" class="form-input pop-input-sm" value="1.0" min="0.1" max="5.0" step="0.1">
+                    <span>pt</span>
+                  </div>
+                </div>
               </div>
               <div class="weights-btn-row">
                 <button id="btn-save-point-weights" class="btn-pop-primary btn-sm">
@@ -1923,13 +1973,13 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260903_v43"></script>
-  <script src="writing_data.js?v=20260903_v43"></script>
-  <script src="math_data.js?v=20260903_v43"></script>
-  <script src="typing_data.js?v=20260903_v43"></script>
-  <script src="kana_data.js?v=20260903_v43"></script>
-  <script src="science_data.js?v=20260903_v43"></script>
-  <script src="society_data.js?v=20260903_v43"></script>
-  <script src="app.js?v=20260903_v43"></script>
+  <script src="quiz_data.js?v=20260904_v44"></script>
+  <script src="writing_data.js?v=20260904_v44"></script>
+  <script src="math_data.js?v=20260904_v44"></script>
+  <script src="typing_data.js?v=20260904_v44"></script>
+  <script src="kana_data.js?v=20260904_v44"></script>
+  <script src="science_data.js?v=20260904_v44"></script>
+  <script src="society_data.js?v=20260904_v44"></script>
+  <script src="app.js?v=20260904_v44"></script>
 </body>
 </html>

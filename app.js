@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v43';
-const APP_VERSION_LABEL = '🌸 ばーじょん43 🌸';
+const APP_VERSION_CODE = 'v44';
+const APP_VERSION_LABEL = '🌸 ばーじょん44 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -656,7 +656,9 @@ function getDefaultAccount(id) {
     customPointWeights: null,
     pendingBonus: null,
     pendingBadgePopups: [],
-    weakQuestions: []
+    weakQuestions: [],
+    scienceHistory: {},
+    societyHistory: {}
   };
 }
 
@@ -698,7 +700,9 @@ function loadAccounts() {
             customPointWeights: (acc.customPointWeights && typeof acc.customPointWeights === 'object') ? acc.customPointWeights : null,
             pendingBonus: acc.pendingBonus || null,
             pendingBadgePopups: Array.isArray(acc.pendingBadgePopups) ? acc.pendingBadgePopups : [],
-            weakQuestions: Array.isArray(acc.weakQuestions) ? acc.weakQuestions : []
+            weakQuestions: Array.isArray(acc.weakQuestions) ? acc.weakQuestions : [],
+            scienceHistory: (acc.scienceHistory && typeof acc.scienceHistory === 'object') ? acc.scienceHistory : {},
+            societyHistory: (acc.societyHistory && typeof acc.societyHistory === 'object') ? acc.societyHistory : {}
           };
         });
       }
@@ -1358,6 +1362,32 @@ function renderPortalScreen() {
       if (kanaHintEl) kanaHintEl.textContent = `🪙 ${formatPoints(ptsKana)}pt/問`;
     } else {
       cardKana.style.display = 'none';
+    }
+  }
+
+  // H-2-7: 理科・社会カードの表示制御（5年生限定表示、それ以外の学年は非表示）
+  const ptsScience = getPointPerQuestion(acc, 'science');
+  const ptsSociety = getPointPerQuestion(acc, 'society');
+
+  const cardScience = document.getElementById('card-subject-science');
+  if (cardScience) {
+    if (grade === 5) {
+      cardScience.style.display = 'flex';
+      const sciHintEl = document.getElementById('portal-science-pts-hint');
+      if (sciHintEl) sciHintEl.textContent = `🪙 ${formatPoints(ptsScience)}pt/問`;
+    } else {
+      cardScience.style.display = 'none';
+    }
+  }
+
+  const cardSociety = document.getElementById('card-subject-society');
+  if (cardSociety) {
+    if (grade === 5) {
+      cardSociety.style.display = 'flex';
+      const socHintEl = document.getElementById('portal-society-pts-hint');
+      if (socHintEl) socHintEl.textContent = `🪙 ${formatPoints(ptsSociety)}pt/問`;
+    } else {
+      cardSociety.style.display = 'none';
     }
   }
 
@@ -2340,6 +2370,8 @@ function renderParentPanel() {
   const defWriting = getPointPerQuestion(acc, 'writing');
   const defMath = getPointPerQuestion(acc, 'math');
   const defTyping = getPointPerQuestion(acc, 'typing');
+  const defScience = getPointPerQuestion(acc, 'science');
+  const defSociety = getPointPerQuestion(acc, 'society');
 
   const elKanji = document.getElementById('cfg-weight-kanji');
   if (elKanji) elKanji.value = weights.kanji !== undefined ? weights.kanji : defKanji;
@@ -2351,6 +2383,10 @@ function renderParentPanel() {
   if (elMath) elMath.value = weights.math !== undefined ? weights.math : defMath;
   const elTyping = document.getElementById('cfg-weight-typing');
   if (elTyping) elTyping.value = weights.typing !== undefined ? weights.typing : defTyping;
+  const elScience = document.getElementById('cfg-weight-science');
+  if (elScience) elScience.value = weights.science !== undefined ? weights.science : defScience;
+  const elSociety = document.getElementById('cfg-weight-society');
+  if (elSociety) elSociety.value = weights.society !== undefined ? weights.society : defSociety;
 
   // AI採点設定の反映
   const elAi = document.getElementById('cfg-ai-grading');
@@ -2369,8 +2405,12 @@ function savePointWeights() {
   const wWriting = parseFloat(document.getElementById('cfg-weight-writing').value);
   const wMath = parseFloat(document.getElementById('cfg-weight-math').value);
   const wTyping = parseFloat(document.getElementById('cfg-weight-typing').value);
+  const elScience = document.getElementById('cfg-weight-science');
+  const wScience = elScience ? parseFloat(elScience.value) : 1.0;
+  const elSociety = document.getElementById('cfg-weight-society');
+  const wSociety = elSociety ? parseFloat(elSociety.value) : 1.0;
 
-  if (isNaN(wKanji) || wKanji <= 0 || isNaN(wKana) || wKana <= 0 || isNaN(wWriting) || wWriting <= 0 || isNaN(wMath) || wMath <= 0 || isNaN(wTyping) || wTyping <= 0) {
+  if (isNaN(wKanji) || wKanji <= 0 || isNaN(wKana) || wKana <= 0 || isNaN(wWriting) || wWriting <= 0 || isNaN(wMath) || wMath <= 0 || isNaN(wTyping) || wTyping <= 0 || isNaN(wScience) || wScience <= 0 || isNaN(wSociety) || wSociety <= 0) {
     alert('正しいポイント数（0.1以上）を入力してください。');
     return;
   }
@@ -2380,7 +2420,9 @@ function savePointWeights() {
     kana: Math.round(wKana * 10) / 10,
     writing: Math.round(wWriting * 10) / 10,
     math: Math.round(wMath * 10) / 10,
-    typing: Math.round(wTyping * 10) / 10
+    typing: Math.round(wTyping * 10) / 10,
+    science: Math.round(wScience * 10) / 10,
+    society: Math.round(wSociety * 10) / 10
   };
 
   saveAccounts();
@@ -2849,19 +2891,26 @@ function getPointPerQuestion(acc, subject) {
   if (subject === 'writing') return 1.0;
   if (subject === 'math') return 1.0;
   if (subject === 'typing') return 0.4;
+  if (subject === 'science') return 1.0;
+  if (subject === 'society') return 1.0;
   return 1.0;
 }
 
 // =============================================
-//  DIFFICULTY & POINT CALCULATION (漢字・かなクイズ)
+//  DIFFICULTY & POINT CALCULATION (漢字・かな・理科・社会クイズ)
 // =============================================
-let quizMode = 'kanji';               // E-3: 'kanji' | 'kana_katakana' | 'kana_hiragana'
+let quizMode = 'kanji';               // 'kanji' | 'kana_katakana' | 'kana_hiragana' | 'science' | 'society'
 let lastQuizSessionType = 'kanji';     // リトライ用記憶
 
 function calcQuestionPoint(q) {
   const acc = accounts[currentAccountId];
-  const isKana = (quizMode !== 'kanji');
-  const basePoints = getPointPerQuestion(acc, isKana ? 'kana' : 'kanji');
+  let subjectKey = 'kanji';
+  if (quizMode === 'science') subjectKey = 'science';
+  else if (quizMode === 'society') subjectKey = 'society';
+  else if (quizMode === 'kana_katakana' || quizMode === 'kana_hiragana') subjectKey = 'kana';
+
+  const isKana = (quizMode === 'kana_katakana' || quizMode === 'kana_hiragana');
+  const basePoints = getPointPerQuestion(acc, subjectKey);
   const bonus = (!isKana && q && q.isWeakRevenge) ? 0.2 : 0;
   const total = Math.round((basePoints + bonus) * 100) / 100;
 
@@ -2877,6 +2926,155 @@ function calcQuestionPoint(q) {
 let sessionEarnedPoints = 0;
 let quizSessionFinished = false;
 let quizTransitionTimer = null;
+
+// =============================================
+//  🔬 理科・🌏 社会 出題エンジン (H-2-3, H-2-4)
+// =============================================
+
+/**
+ * ACTIVE_UNITS 定数を参照し、出題対象の単元問題のみを抽出する (H-2-3)
+ */
+function getActiveSubjectData(subject, grade = 5) {
+  if (subject === 'science') {
+    if (typeof SCIENCE_DATA === 'undefined' || !SCIENCE_DATA[grade]) return [];
+    const activeUnits = (typeof SCIENCE_ACTIVE_UNITS !== 'undefined' && SCIENCE_ACTIVE_UNITS[grade]) || [];
+    if (!Array.isArray(activeUnits) || activeUnits.length === 0) return [];
+    return SCIENCE_DATA[grade].filter(item => activeUnits.includes(item.u));
+  } else if (subject === 'society') {
+    if (typeof SOCIETY_DATA === 'undefined' || !SOCIETY_DATA[grade]) return [];
+    const activeUnits = (typeof SOCIETY_ACTIVE_UNITS !== 'undefined' && SOCIETY_ACTIVE_UNITS[grade]) || [];
+    if (!Array.isArray(activeUnits) || activeUnits.length === 0) return [];
+    return SOCIETY_DATA[grade].filter(item => activeUnits.includes(item.u));
+  }
+  return [];
+}
+
+/**
+ * 理科・社会の文章問題出題ビルダー (H-2-4)
+ * - 漢字読みと同じ習熟度サイクルブレンド（にがて・復習・未挑戦・マスター）
+ * - 履歴キーは "science:A1-01" / "society:S1-01"
+ * - 選択肢は getDistractors を使わずデータの d を直接シャッフル
+ * - 未挑戦が0件でも重複なく問題数を満たす安全設計
+ */
+function buildTextSubjectQuiz(subject, count = 10) {
+  const activeQuestions = getActiveSubjectData(subject, 5);
+  if (activeQuestions.length === 0) return [];
+
+  const targetCount = Math.min(count, activeQuestions.length);
+  const history = loadHistory(currentAccountId);
+
+  // 4つのプールに分類
+  const weakPool = [];
+  const learningPool = [];
+  const unseenPool = [];
+  const masterPool = [];
+
+  activeQuestions.forEach(item => {
+    const histKey = `${subject}:${item.id}`;
+    const rec = history[histKey];
+    if (!rec || ((rec.correctCount || 0) === 0 && (rec.wrongCount || 0) === 0)) {
+      unseenPool.push(item);
+    } else if (rec.isWeak === true) {
+      weakPool.push(item);
+    } else if ((rec.streak || 0) >= 3) {
+      masterPool.push(item);
+    } else {
+      learningPool.push(item);
+    }
+  });
+
+  // 1. にがて枠 (最大約35%)
+  const targetWeak = Math.min(Math.ceil(targetCount * 0.35), weakPool.length);
+  const chosenWeak = shuffle(weakPool).slice(0, targetWeak);
+
+  // 2. 定着・反復学習枠 (最大約35%)
+  const targetLearning = Math.min(Math.ceil(targetCount * 0.35), learningPool.length);
+  const chosenLearning = shuffle(learningPool).slice(0, targetLearning);
+
+  // 3. 残り枠は「未挑戦」から優先選出、足りなければ「マスター」から補填
+  const remainingSlots = targetCount - (chosenWeak.length + chosenLearning.length);
+  const shuffledUnseen = shuffle(unseenPool);
+  const chosenUnseen = shuffledUnseen.slice(0, remainingSlots);
+
+  const neededFromMaster = remainingSlots - chosenUnseen.length;
+  const chosenMaster = neededFromMaster > 0 ? shuffle(masterPool).slice(0, neededFromMaster) : [];
+
+  let selected = shuffle([...chosenWeak, ...chosenLearning, ...chosenUnseen, ...chosenMaster]);
+
+  // 万一未挑戦が0件または各プール枯渇で目標数に満たない場合、残りの全アクティブ問題からID重複なく補填
+  if (selected.length < targetCount) {
+    const usedSet = new Set(selected.map(s => s.id));
+    const leftovers = shuffle(activeQuestions.filter(i => !usedSet.has(i.id)));
+    selected = [...selected, ...leftovers.slice(0, targetCount - selected.length)];
+  }
+
+  return selected.map(item => {
+    const distractors = Array.isArray(item.d) ? item.d : [];
+    const choices = shuffle([item.a, ...distractors]);
+    const histKey = `${subject}:${item.id}`;
+    const rec = history[histKey];
+    const isWeakRevenge = rec && rec.isWeak === true;
+
+    return {
+      id: item.id,
+      question: item.q,
+      correct: item.a,
+      choices,
+      hint: item.h || '',
+      unit: item.u,
+      subject: subject,
+      isWeakRevenge
+    };
+  });
+}
+
+function startTextSubjectQuiz(subject) {
+  const activeData = getActiveSubjectData(subject, 5);
+  if (activeData.length === 0) {
+    alert('いま おやすみ中です');
+    quizMode = 'kanji';
+    return;
+  }
+
+  quizMode = subject; // 'science' | 'society'
+  lastQuizSessionType = subject;
+  quizSessionFinished = false;
+  if (quizTransitionTimer) {
+    clearTimeout(quizTransitionTimer);
+    quizTransitionTimer = null;
+  }
+  isWeakTrainingMode = false;
+
+  quizQuestions = buildTextSubjectQuiz(subject, 10);
+  if (quizQuestions.length === 0) {
+    alert('いま おやすみ中です');
+    quizMode = 'kanji';
+    return;
+  }
+
+  currentIndex = 0;
+  score = 0;
+  sessionEarnedPoints = 0;
+  wrongAnswers = [];
+  conqueredThisSession = [];
+  masteredThisSession = [];
+  answered = false;
+
+  document.getElementById('q-total').textContent = quizQuestions.length;
+  document.getElementById('quiz-mode-tag').textContent = (subject === 'science') ? '理科' : '社会';
+  document.getElementById('quiz-session-points').textContent = '0';
+  updateScore();
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+
+function startScienceQuiz() {
+  startTextSubjectQuiz('science');
+}
+
+function startSocietyQuiz() {
+  startTextSubjectQuiz('society');
+}
 
 // E-2: かな用の選択肢生成（getDistractorsは使わず、データのdフィールドを使用）
 function buildKanaQuiz(type, count = 10) {
@@ -2998,9 +3196,18 @@ function renderQuestion() {
   }
 
   const text = q.question;
-  const isKana = (quizMode !== 'kanji');
+  const isKana = (quizMode === 'kana_katakana' || quizMode === 'kana_hiragana');
+  const isTextMode = (quizMode === 'science' || quizMode === 'society');
 
-  if (isKana) {
+  if (isTextMode) {
+    // H-2-2: 長い問題文・選択肢用コンポーネント
+    qLabel.innerHTML = (quizMode === 'science')
+      ? '🔬 ただしい こたえを えらぼう！'
+      : '🌏 ただしい こたえを えらぼう！';
+    kanjiCard.className = 'kanji-card pop-card pop-kanji-box quiz-prompt--text';
+    kanjiCharEl.innerHTML = `<div class="prompt-text-body serif-text">${escapeHtml(text)}</div>`;
+    document.getElementById('example-sentence').innerHTML = '';
+  } else if (isKana) {
     // E-3, E-9: かなモード（単漢字モードの見た目、モード別文言、ルビなし、exヒント非表示）
     qLabel.innerHTML = (quizMode === 'kana_hiragana')
       ? 'この もじを カタカナで かくと？'
@@ -3035,14 +3242,17 @@ function renderQuestion() {
   // 選択肢（明朝体）
   const grid = document.getElementById('choices-grid');
   grid.innerHTML = '';
+  grid.className = isTextMode ? 'choices-grid choices-grid--text' : 'choices-grid';
 
   q.choices.forEach((choice, i) => {
     const btn = document.createElement('button');
-    btn.className = 'choice-btn pop-btn-choice serif-choice';
+    btn.className = isTextMode
+      ? 'choice-btn pop-btn-choice quiz-choice--text serif-choice'
+      : 'choice-btn pop-btn-choice serif-choice';
     btn.setAttribute('role', 'listitem');
     btn.id = `choice-${i}`;
     btn.style.setProperty('--i', i);
-    const choiceHtml = isKana ? choice : addFurigana(choice);
+    const choiceHtml = (isKana || isTextMode) ? escapeHtml(choice) : addFurigana(choice);
     btn.innerHTML = `<span class="choice-text serif-text">${choiceHtml}</span>`;
     btn.addEventListener('click', () => handleChoice(btn, choice, q));
     grid.appendChild(btn);
@@ -3062,8 +3272,18 @@ function handleChoice(btn, choice, q) {
   allBtns.forEach(b => b.disabled = true);
 
   const fb = document.getElementById('feedback-overlay');
-  const isKana = (quizMode !== 'kanji');
-  const histKey = isKana ? `kana:${q.question}` : q.question; // E-6: かな履歴はプレフィックス付きで衝突防止
+  const isKana = (quizMode === 'kana_katakana' || quizMode === 'kana_hiragana');
+  const isTextMode = (quizMode === 'science' || quizMode === 'society');
+
+  let histKey;
+  if (isTextMode) {
+    histKey = `${quizMode}:${q.id}`;
+  } else if (isKana) {
+    histKey = `kana:${q.question}`;
+  } else {
+    histKey = q.question;
+  }
+
   const history = loadHistory(currentAccountId);
   if (!history[histKey]) {
     history[histKey] = { wrongCount: 0, correctCount: 0, streak: 0, isWeak: false, lastAnswered: Date.now() };
@@ -3075,7 +3295,7 @@ function handleChoice(btn, choice, q) {
   if (isCorrect) {
     SoundFx.playCorrect();
     btn.classList.add('correct');
-    btn.innerHTML = `<span class="choice-icon">💮</span> <span class="choice-text serif-text">${choice}</span>`;
+    btn.innerHTML = `<span class="choice-icon">💮</span> <span class="choice-text serif-text">${escapeHtml(choice)}</span>`;
     score++;
     sessionEarnedPoints = Math.round((sessionEarnedPoints + ptInfo.total) * 100) / 100;
     document.getElementById('quiz-session-points').textContent = formatPoints(sessionEarnedPoints);
@@ -3102,7 +3322,7 @@ function handleChoice(btn, choice, q) {
         </span>
       `;
     } else {
-      // 漢字モード（苦手克服・マスター判定）
+      // 漢字・理科・社会モード（苦手克服・マスター判定）
       if (record.isWeak) {
         record.isWeak = false;
         record.streak = 1;
@@ -3134,7 +3354,7 @@ function handleChoice(btn, choice, q) {
   } else {
     SoundFx.playWrong();
     btn.classList.add('wrong');
-    btn.innerHTML = `<span class="choice-icon">❌</span> <span class="choice-text serif-text">${choice}</span>`;
+    btn.innerHTML = `<span class="choice-icon">❌</span> <span class="choice-text serif-text">${escapeHtml(choice)}</span>`;
     fb.innerHTML = '<span class="fb-symbol fb-wrong pop-shake">❌</span>';
 
     // 苦手フラグをONにして連続正解をリセット
@@ -3147,7 +3367,7 @@ function handleChoice(btn, choice, q) {
       const choiceSpan = b.querySelector('.choice-text');
       if (choiceSpan && choiceSpan.textContent.trim() === q.correct) {
         b.classList.add('correct');
-        b.innerHTML = `<span class="choice-icon">💮</span> <span class="choice-text serif-text">${q.correct}</span>`;
+        b.innerHTML = `<span class="choice-icon">💮</span> <span class="choice-text serif-text">${escapeHtml(q.correct)}</span>`;
       }
     });
 
@@ -3160,6 +3380,15 @@ function handleChoice(btn, choice, q) {
   }
 
   saveHistory(currentAccountId, history);
+
+  // アカウントオブジェクト内の理科・社会履歴にもミラー記録 (H-2-6)
+  const curAcc = accounts[currentAccountId];
+  if (isTextMode && curAcc) {
+    const accHistProp = (quizMode === 'science') ? 'scienceHistory' : 'societyHistory';
+    if (!curAcc[accHistProp]) curAcc[accHistProp] = {};
+    curAcc[accHistProp][q.id] = { ...record };
+    saveAccounts();
+  }
 
   fb.classList.add('show');
   updateScore();
@@ -3206,13 +3435,27 @@ function showResult(totalOverride) {
   document.getElementById('result-total').textContent = total;
   document.getElementById('result-percent').textContent = pct;
 
-  // E-5: ポイント付与 & 保存（かな/漢字で科目キー・名称を切り替え）
-  const isKana = (quizMode !== 'kanji');
-  const subjectKey = isKana ? 'kana' : 'kanji';
-  const subjectName = isKana ? '🔤 かな読み' : '📚 漢字ドリル';
-  const historyTitle = isKana
-    ? `かなクイズ${score}問正解 (${total}問中)`
-    : `クイズ${score}問正解 (${total}問中)`;
+  // モード別で科目キー・名称・タイトルを切り替え
+  const isKana = (quizMode === 'kana_katakana' || quizMode === 'kana_hiragana');
+  const isTextMode = (quizMode === 'science' || quizMode === 'society');
+
+  let subjectKey = 'kanji';
+  let subjectName = '📚 漢字ドリル';
+  let historyTitle = `クイズ${score}問正解 (${total}問中)`;
+
+  if (quizMode === 'science') {
+    subjectKey = 'science';
+    subjectName = '🔬 理科クイズ';
+    historyTitle = `理科クイズ${score}問正解 (${total}問中)`;
+  } else if (quizMode === 'society') {
+    subjectKey = 'society';
+    subjectName = '🌏 社会クイズ';
+    historyTitle = `社会クイズ${score}問正解 (${total}問中)`;
+  } else if (isKana) {
+    subjectKey = 'kana';
+    subjectName = '🔤 かな読み';
+    historyTitle = `かなクイズ${score}問正解 (${total}問中)`;
+  }
 
   const acc = accounts[currentAccountId];
   const { actualEarnedPoints, limitNoticeText } = applyEarnedPoints(acc, {
@@ -3258,10 +3501,10 @@ function showResult(totalOverride) {
     document.getElementById('ring-fill').style.strokeDashoffset = offset;
   }, 300);
 
-  // 今回新しくマスターした漢字ボックス（かなモードでは非表示）
+  // 今回新しくマスターした漢字ボックス（漢字モードのみ表示）
   const masteredBox = document.getElementById('result-mastered-box');
   if (masteredBox) {
-    if (!isKana && masteredThisSession.length > 0) {
+    if (!isKana && !isTextMode && masteredThisSession.length > 0) {
       masteredBox.style.display = 'block';
       const tagList = masteredThisSession.map(q => {
         const cleanQ = q.question.replace(/【(.*?)】/g, '$1');
@@ -3276,10 +3519,10 @@ function showResult(totalOverride) {
     }
   }
 
-  // 克服できた問題ボックス（かなモードでは非表示）
+  // 克服できた問題ボックス（漢字モードのみ表示）
   const conqueredBox = document.getElementById('result-conquered-box');
   if (conqueredBox) {
-    if (!isKana && conqueredThisSession.length > 0) {
+    if (!isKana && !isTextMode && conqueredThisSession.length > 0) {
       conqueredBox.style.display = 'block';
       const tagList = conqueredThisSession.map(q => {
         const cleanQ = q.question.replace(/【(.*?)】/g, '$1');
@@ -3301,7 +3544,7 @@ function showResult(totalOverride) {
   if (wrongAnswers.length > 0) {
     const titleEl = document.createElement('p');
     titleEl.className = 'wrong-list-title';
-    titleEl.textContent = isKana
+    titleEl.textContent = (isKana || isTextMode)
       ? `▼ おさらいしよう (${wrongAnswers.length}問)`
       : `▼ おさらいしよう (${wrongAnswers.length}問・次回優先して出題されます)`;
     listEl.appendChild(titleEl);
@@ -3311,10 +3554,10 @@ function showResult(totalOverride) {
       item.className = 'wrong-item pop-card-mini';
       const cleanQ = w.question.replace(/【(.*?)】/g, '$1');
       item.innerHTML = `
-        <span class="wrong-kanji serif-text">${cleanQ}</span>
+        <span class="wrong-kanji serif-text" style="${isTextMode ? 'font-size:1.15rem; line-height:1.5; font-weight:700;' : ''}">${escapeHtml(cleanQ)}</span>
         <div class="wrong-details">
-          <div class="wrong-correct-reading">せいかい: <strong class="serif-text">${w.correct}</strong></div>
-          <div class="wrong-your-answer">あなたのこたえ: <span class="serif-text">${w.yourAnswer}</span></div>
+          <div class="wrong-correct-reading">せいかい: <strong class="serif-text">${escapeHtml(w.correct)}</strong></div>
+          <div class="wrong-your-answer">あなたのこたえ: <span class="serif-text">${escapeHtml(w.yourAnswer)}</span></div>
         </div>
       `;
       listEl.appendChild(item);
@@ -3330,10 +3573,10 @@ function showResult(totalOverride) {
   SoundFx.playFanfare();
   ConfettiFx.launch(score >= quizQuestions.length ? 80 : 50);
 
-  // 🏆 実績判定 & ポップアップ
+  // 🏆 実績判定 & ポップアップ（漢字モードのみ）
   checkAndUnlockAchievements(acc, {
-    kanjiPerfect: !isKana && score === total && total >= 5,
-    weakConquered: !isKana && conqueredThisSession.length > 0
+    kanjiPerfect: (!isKana && !isTextMode) && score === total && total >= 5,
+    weakConquered: (!isKana && !isTextMode) && conqueredThisSession.length > 0
   });
   setTimeout(() => showPendingBadgePopups(), 600);
 
@@ -4805,7 +5048,9 @@ function importDataBackup(event) {
           customPointWeights: (raw.customPointWeights && typeof raw.customPointWeights === 'object') ? raw.customPointWeights : null,
           pendingBonus: null,
           pendingBadgePopups: [],
-          weakQuestions: Array.isArray(raw.weakQuestions) ? raw.weakQuestions : []
+          weakQuestions: Array.isArray(raw.weakQuestions) ? raw.weakQuestions : [],
+          scienceHistory: (raw.scienceHistory && typeof raw.scienceHistory === 'object') ? raw.scienceHistory : {},
+          societyHistory: (raw.societyHistory && typeof raw.societyHistory === 'object') ? raw.societyHistory : {}
         };
       });
 
@@ -6654,6 +6899,16 @@ document.addEventListener('DOMContentLoaded', () => {
     btnPortalKanaHiragana.addEventListener('click', () => startKanaQuiz('hiragana'));
   }
 
+  // H-2-8: ポータル画面 理科・社会ボタン
+  const btnPortalScience = document.getElementById('btn-portal-science');
+  if (btnPortalScience) {
+    btnPortalScience.addEventListener('click', () => startScienceQuiz());
+  }
+  const btnPortalSociety = document.getElementById('btn-portal-society');
+  if (btnPortalSociety) {
+    btnPortalSociety.addEventListener('click', () => startSocietyQuiz());
+  }
+
   document.getElementById('btn-change-account').addEventListener('click', () => {
     quizMode = 'kanji';
     renderAccountScreen();
@@ -6661,8 +6916,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-quit').addEventListener('click', () => {
     const answeredCount = currentIndex + (answered ? 1 : 0);
-    const isKana = (quizMode !== 'kanji');
-    const quitConfirmText = isKana ? 'かなクイズをやめてポータルにもどる？' : '漢字クイズをやめてポータルにもどる？';
+    let quitConfirmText = '漢字クイズをやめてポータルにもどる？';
+    if (quizMode === 'science') {
+      quitConfirmText = '理科クイズをやめてポータルにもどる？';
+    } else if (quizMode === 'society') {
+      quitConfirmText = '社会クイズをやめてポータルにもどる？';
+    } else if (quizMode === 'kana_katakana' || quizMode === 'kana_hiragana') {
+      quitConfirmText = 'かなクイズをやめてポータルにもどる？';
+    }
     if (answeredCount === 0) {
       if (confirm(quitConfirmText)) {
         quizSessionFinished = true;
@@ -6688,6 +6949,10 @@ document.addEventListener('DOMContentLoaded', () => {
       startKanaQuiz('katakana');
     } else if (lastQuizSessionType === 'kana_hiragana') {
       startKanaQuiz('hiragana');
+    } else if (lastQuizSessionType === 'science') {
+      startScienceQuiz();
+    } else if (lastQuizSessionType === 'society') {
+      startSocietyQuiz();
     } else {
       startQuiz(isWeakTrainingMode);
     }
