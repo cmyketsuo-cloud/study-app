@@ -9,6 +9,8 @@ const ASSETS = [
   './math_data.js',
   './typing_data.js',
   './kana_data.js',
+  './science_data.js',
+  './society_data.js',
   './character_guide.png',
   './manifest.json',
   './apple-touch-icon.png',

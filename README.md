@@ -148,6 +148,6 @@ iPadでは、Safariで開いて「ホーム画面に追加」を行うことで�
 コードを変更して新しいバージョンを配布する際は、端末（特にiPad PWA）に古いファイルがキャッシュされ続けるのを防ぎ、画面表示と実際の版の食い違いを防止するため、**以下の箇所を必ず同時に更新**してください：
 
 1. **`sw.js:1`**: `CACHE_NAME` のバージョン（例: `'wakuwaku-learning-v43'`）をインクリメントする（※番号を下げると古いキャッシュが再利用される恐れがあるため必ず加算。`ASSETS` に `kana_data.js` を含む全ファイルが登録されていること）。
-2. **`index.html` 末尾**: `<script>` タグのクエリ文字列（例: `?v=20260903_v43`）を同じバージョン文字列に揃える（`quiz_data.js` / `writing_data.js` / `math_data.js` / `typing_data.js` / `kana_data.js` / `app.js` の全6ファイル分）。
+2. **`index.html` 末尾**: `<script>` タグのクエリ文字列（例: `?v=20260903_v43`）を同じバージョン文字列に揃える（`quiz_data.js` / `writing_data.js` / `math_data.js` / `typing_data.js` / `kana_data.js` / `science_data.js` / `society_data.js` / `app.js` の全8ファイル分）。
 3. **`app.js`（先頭定数）**: `APP_VERSION_LABEL`（例: `'🌸 ばーじょん43 🌸'`）を更新する（※`DOMContentLoaded` 時に画面内の全 `.cute-version-badge` へ一括自動反映されます。初回チラつき防止のため `index.html:73, 395` の初期HTML表記も併せて更新）。
 4. **バージョン履歴の更新**: `README.md` のバージョン履歴表、`SPEC_AND_KNOWLEDGE.md`、`コンテキスト.md` のバージョン表記を最新版に更新する。
