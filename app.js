@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v45';
-const APP_VERSION_LABEL = '🌸 ばーじょん45 🌸';
+const APP_VERSION_CODE = 'v46';
+const APP_VERSION_LABEL = '🌸 ばーじょん46 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -645,6 +645,17 @@ function changeAccountPoints(acc, key, delta) {
   const next = Math.max(0, Math.round((current + delta) * 100) / 100);
   acc[key] = next;
   return next;
+}
+
+/**
+ * ■ I-8. 本交換やウィッシュリスト計算に使える実質ポイント
+ * 「Math.floor(所持ポイント) − 申請中のお小遣い額（0未満にしない）」
+ */
+function getExchangeablePoints(acc) {
+  if (!acc) return 0;
+  const points = typeof acc.points === 'number' && !isNaN(acc.points) ? acc.points : 0;
+  const pendingAmount = (acc.pendingCashRequest && typeof acc.pendingCashRequest.amount === 'number') ? acc.pendingCashRequest.amount : 0;
+  return Math.max(0, Math.floor(points) - pendingAmount);
 }
 
 /**
@@ -2046,6 +2057,12 @@ function openWalletScreen(accountId) {
     }
   }
 
+  // 本交換の欄とお小遣いの欄を空にしてからプレビュー更新
+  const bookInput = document.getElementById('book-exchange-input');
+  if (bookInput) bookInput.value = '';
+  const cashInput = document.getElementById('cash-request-input');
+  if (cashInput) cashInput.value = '';
+
   updateWalletPreviews();
   renderWalletHistory(acc);
   renderWishlist(acc);
@@ -2064,9 +2081,8 @@ function updateWalletPreviews() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
-  const pendingAmount = (acc.pendingCashRequest && typeof acc.pendingCashRequest.amount === 'number') ? acc.pendingCashRequest.amount : 0;
-  // 交換できる上限 ＝ Math.floor(所持ポイント) − 申請中のお小遣い額
-  const maxAvailable = Math.max(0, Math.floor(acc.points || 0) - pendingAmount);
+  // 交換できる上限 ＝ Math.floor(所持ポイント) − 申請中のお小遣い額（0未満にしない）
+  const maxAvailable = getExchangeablePoints(acc);
 
   const maxAvailEl = document.getElementById('book-exchange-max-avail');
   if (maxAvailEl) {
@@ -2092,10 +2108,10 @@ function updateWalletPreviews() {
       bonusLine.style.display = bonus > 0 ? 'block' : 'none';
     }
   } else {
-    // 欄が空か不正な値のときは、いまと同じ「すべて交換すると」の表示に戻す
-    const points = acc.points || 0;
-    const bookEquiv = calcBookEquiv(points);
-    const bonus = bookEquiv - points;
+    // 欄が空か不正な値のときは「すべて交換すると」の表示（申請中のお小遣い分は除外）
+    const availPoints = getExchangeablePoints(acc);
+    const bookEquiv = calcBookEquiv(availPoints);
+    const bonus = bookEquiv - availPoints;
     if (calcLabelEl) calcLabelEl.textContent = 'ポイントをすべて本に交換すると:';
     if (bookEl) bookEl.textContent = `${bookEquiv} 円分`;
     if (bonusEl) bonusEl.textContent = `+${Math.max(0, bonus)}`;
@@ -2119,8 +2135,8 @@ function renderWishlist(acc) {
     return;
   }
 
-  // 総本購入可能額 (交換済み本ポイント ＋ 通常ポイントの為替換算額)
-  const totalBookFunds = (acc.bookPoints || 0) + calcBookEquiv(acc.points || 0);
+  // 総本購入可能額 (交換済み本ポイント ＋ 交換可能な通常ポイントの為替換算額)
+  const totalBookFunds = (acc.bookPoints || 0) + calcBookEquiv(getExchangeablePoints(acc));
 
   wishlist.forEach(item => {
     const card = document.createElement('div');
@@ -2328,9 +2344,9 @@ function exchangeToBooks() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
+  // 交換できる上限 ＝ Math.floor(所持ポイント) − 申請中のお小遣い額（0未満にしない）
+  const maxAvailable = getExchangeablePoints(acc);
   const pendingAmount = (acc.pendingCashRequest && typeof acc.pendingCashRequest.amount === 'number') ? acc.pendingCashRequest.amount : 0;
-  // 交換できる上限 ＝ Math.floor(所持ポイント) − 申請中のお小遣い額
-  const maxAvailable = Math.floor(acc.points || 0) - pendingAmount;
 
   if (maxAvailable <= 0) {
     if (Math.floor(acc.points || 0) > 0 && pendingAmount > 0) {
