@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん44 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん45 🌸</span>
       </div>
     </div>
   </div>
@@ -428,7 +428,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん44 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん45 🌸</span>
       </div>
     </div>
   </div>
@@ -1448,6 +1448,9 @@
           <div class="balance-cash-note">
             💵 お小遣いならそのまま: <strong id="wallet-cash-equiv">0</strong> 円分（1pt = 1円）
           </div>
+          <div class="wallet-pending-cash-banner" id="wallet-pending-cash-banner" style="display:none;">
+            <span>💴</span> お小遣い申請中：<strong id="wallet-pending-cash-amount">0</strong> 円（おうちの人の精算まち）
+          </div>
         </div>
 
         <!-- バリューブックス為替連動交換カード -->
@@ -1465,9 +1468,17 @@
             100ptを1ドルとして日本円に換算！為替（円安）の力でお小遣いよりも<strong>おトク</strong>に本が買えるよ！
           </p>
 
+          <div class="wallet-input-row fx-input-row" id="book-exchange-input-row">
+            <input type="text" inputmode="numeric" id="book-exchange-input" class="wallet-amount-input pop-input" placeholder="例: 200">
+            <span class="wallet-input-unit">pt</span>
+          </div>
+          <div class="wallet-input-hint" id="book-exchange-available-note">
+            つかえるのは <strong id="book-exchange-max-avail">0</strong> pt まで
+          </div>
+
           <div class="fx-conversion-preview">
             <div class="fx-calc-line">
-              <span>ポイントをすべて本に交換すると:</span>
+              <span id="wallet-book-calc-label">ポイントをすべて本に交換すると:</span>
               <strong class="fx-book-value" id="wallet-book-equiv">0 円分</strong>
             </div>
             <div class="fx-bonus-line" id="wallet-bonus-line">
@@ -1544,6 +1555,13 @@
             <h3 class="cash-heading">💵 お小遣いにする（1pt = 1円）</h3>
           </div>
           <p class="cash-desc">現金でお小遣いをもらいたいときは、おうちの人に申請してね。</p>
+          <div class="wallet-input-row" id="cash-request-input-row">
+            <input type="text" inputmode="numeric" id="cash-request-input" class="wallet-amount-input pop-input" placeholder="例: 100">
+            <span class="wallet-input-unit">pt</span>
+          </div>
+          <div class="wallet-input-hint" id="cash-available-note">
+            つかえるのは <strong id="cash-max-avail">0</strong> pt まで
+          </div>
           <button id="btn-claim-cash" class="btn-pop-cash">
             <span>💴</span> お小遣いをもらう（申請）
           </button>
@@ -1973,13 +1991,13 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260904_v44"></script>
-  <script src="writing_data.js?v=20260904_v44"></script>
-  <script src="math_data.js?v=20260904_v44"></script>
-  <script src="typing_data.js?v=20260904_v44"></script>
-  <script src="kana_data.js?v=20260904_v44"></script>
-  <script src="science_data.js?v=20260904_v44"></script>
-  <script src="society_data.js?v=20260904_v44"></script>
-  <script src="app.js?v=20260904_v44"></script>
+  <script src="quiz_data.js?v=20260928_v45"></script>
+  <script src="writing_data.js?v=20260928_v45"></script>
+  <script src="math_data.js?v=20260928_v45"></script>
+  <script src="typing_data.js?v=20260928_v45"></script>
+  <script src="kana_data.js?v=20260928_v45"></script>
+  <script src="science_data.js?v=20260928_v45"></script>
+  <script src="society_data.js?v=20260928_v45"></script>
+  <script src="app.js?v=20260928_v45"></script>
 </body>
 </html>

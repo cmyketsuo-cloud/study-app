@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v44';
-const APP_VERSION_LABEL = '🌸 ばーじょん44 🌸';
+const APP_VERSION_CODE = 'v45';
+const APP_VERSION_LABEL = '🌸 ばーじょん45 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -635,6 +635,95 @@ function checkAndResetLimits(acc) {
   if (typeof acc.monthlyLimits.carryOverUnlocked !== 'boolean') acc.monthlyLimits.carryOverUnlocked = false;
 }
 
+/**
+ * ■ I-1. ポイント（points / bookPoints）を増減させる共通関数
+ * 足し引きしたあと Math.round(x * 100) / 100 で丸め、0未満にしない
+ */
+function changeAccountPoints(acc, key, delta) {
+  if (!acc) return 0;
+  const current = typeof acc[key] === 'number' && !isNaN(acc[key]) ? acc[key] : 0;
+  const next = Math.max(0, Math.round((current + delta) * 100) / 100);
+  acc[key] = next;
+  return next;
+}
+
+/**
+ * ■ I-2. 整数入力のチェック共通関数
+ * 入力文字列を受け取り、「1以上の整数」なら数値を、そうでなければ null を返す。
+ * 全角数字は半角に直してから判定。小数・0・マイナス・数字以外が混ざったものは null。
+ * null のときは子どもにわかる言葉で表示する（options.silent が true のときは非表示）。
+ */
+function parsePositiveIntegerInput(rawInput, options = {}) {
+  const silent = Boolean(options && options.silent);
+
+  if (rawInput === null || rawInput === undefined) {
+    return null;
+  }
+
+  // 全角数字を半角数字に変換しトリム
+  const str = String(rawInput)
+    .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+    .trim();
+
+  if (str === '') {
+    if (!silent) {
+      alert('1いじょうの せいすう（数字）を 入れてね。');
+    }
+    return null;
+  }
+
+  // 小数のチェック
+  if (str.includes('.') || str.includes('。')) {
+    if (!silent) {
+      alert('1いじょうの せいすうで 入れてね（小数はつかえないよ）');
+    }
+    return null;
+  }
+
+  // マイナスのチェック
+  if (str.startsWith('-') || str.includes('-') || str.includes('ー') || str.includes('−')) {
+    if (!silent) {
+      alert('1いじょうの せいすうで 入れてね（マイナスはつかえないよ）');
+    }
+    return null;
+  }
+
+  // 数字以外の文字チェック
+  if (!/^\d+$/.test(str)) {
+    if (!silent) {
+      alert('1いじょうの せいすうで 入れてね（すうじ以外の文字はつかえないよ）');
+    }
+    return null;
+  }
+
+  const val = Number(str);
+  if (!Number.isSafeInteger(val) || val <= 0) {
+    if (!silent) {
+      alert('1いじょうの せいすうで 入れてね（0はつかえないよ）');
+    }
+    return null;
+  }
+
+  return val;
+}
+
+/**
+ * ■ I-6. お小遣い申請データのサニタイズ共通関数
+ * amount が1以上の整数でなければ null
+ * amount が Math.floor(所持ポイント) を超えていたら null
+ * date が数値でなければ Date.now() を入れる
+ */
+function sanitizePendingCashRequest(req, points) {
+  if (!req || typeof req !== 'object') return null;
+  const maxAvailable = Math.floor(typeof points === 'number' && !isNaN(points) ? Math.max(0, points) : 0);
+  const amount = Number(req.amount);
+  if (!Number.isInteger(amount) || amount < 1 || amount > maxAvailable) {
+    return null;
+  }
+  const date = (typeof req.date === 'number' && !isNaN(req.date)) ? req.date : Date.now();
+  return { amount, date };
+}
+
 function getDefaultAccount(id) {
   return {
     id,
@@ -658,7 +747,8 @@ function getDefaultAccount(id) {
     pendingBadgePopups: [],
     weakQuestions: [],
     scienceHistory: {},
-    societyHistory: {}
+    societyHistory: {},
+    pendingCashRequest: null
   };
 }
 
@@ -702,7 +792,8 @@ function loadAccounts() {
             pendingBadgePopups: Array.isArray(acc.pendingBadgePopups) ? acc.pendingBadgePopups : [],
             weakQuestions: Array.isArray(acc.weakQuestions) ? acc.weakQuestions : [],
             scienceHistory: (acc.scienceHistory && typeof acc.scienceHistory === 'object') ? acc.scienceHistory : {},
-            societyHistory: (acc.societyHistory && typeof acc.societyHistory === 'object') ? acc.societyHistory : {}
+            societyHistory: (acc.societyHistory && typeof acc.societyHistory === 'object') ? acc.societyHistory : {},
+            pendingCashRequest: sanitizePendingCashRequest(acc.pendingCashRequest, acc.points)
           };
         });
       }
@@ -1884,12 +1975,7 @@ function saveSettings() {
 }
 
 function deleteAccount(id) {
-  accounts[id] = { 
-    id, name: null, birthYear: null, 
-    points: 0, bookPoints: 0, pointHistory: [], wishlist: [],
-    monthlyLimits: getDefaultLimits(),
-    themeColor: SLOT_THEMES[id].color, avatarPhoto: null, avatarEmoji: null
-  };
+  accounts[id] = getDefaultAccount(id);
   saveAccounts();
   saveHistory(id, {}); // 履歴も消去
   renderAccountScreen();
@@ -1929,6 +2015,37 @@ function openWalletScreen(accountId) {
   document.getElementById('wallet-book-stock').textContent = `${acc.bookPoints || 0} 円分`;
   document.getElementById('wallet-fx-rate').textContent = currentFxRate.toFixed(2);
 
+  // ■ I-3. お小遣い申請中バナーと申請フォームの切り替え
+  const pending = acc.pendingCashRequest;
+  const bannerEl = document.getElementById('wallet-pending-cash-banner');
+  const bannerAmountEl = document.getElementById('wallet-pending-cash-amount');
+  const cashInputRow = document.getElementById('cash-request-input-row');
+  const cashAvailNote = document.getElementById('cash-available-note');
+  const cashMaxAvail = document.getElementById('cash-max-avail');
+  const claimBtn = document.getElementById('btn-claim-cash');
+
+  const maxCashAvailable = Math.floor(acc.points || 0);
+  if (cashMaxAvail) cashMaxAvail.textContent = maxCashAvailable;
+
+  if (pending && typeof pending.amount === 'number' && pending.amount > 0) {
+    if (bannerEl) bannerEl.style.display = 'flex';
+    if (bannerAmountEl) bannerAmountEl.textContent = pending.amount;
+    if (cashInputRow) cashInputRow.style.display = 'none';
+    if (cashAvailNote) cashAvailNote.style.display = 'none';
+    if (claimBtn) {
+      claimBtn.innerHTML = '<span>↩️</span> 申請をとりけす';
+      claimBtn.classList.add('btn-pop-cash-cancel');
+    }
+  } else {
+    if (bannerEl) bannerEl.style.display = 'none';
+    if (cashInputRow) cashInputRow.style.display = 'flex';
+    if (cashAvailNote) cashAvailNote.style.display = 'block';
+    if (claimBtn) {
+      claimBtn.innerHTML = '<span>💴</span> お小遣いをもらう（申請）';
+      claimBtn.classList.remove('btn-pop-cash-cancel');
+    }
+  }
+
   updateWalletPreviews();
   renderWalletHistory(acc);
   renderWishlist(acc);
@@ -1947,18 +2064,44 @@ function updateWalletPreviews() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
-  const points = acc.points || 0;
-  const bookEquiv = calcBookEquiv(points);
-  const bonus = bookEquiv - points;
+  const pendingAmount = (acc.pendingCashRequest && typeof acc.pendingCashRequest.amount === 'number') ? acc.pendingCashRequest.amount : 0;
+  // 交換できる上限 ＝ Math.floor(所持ポイント) − 申請中のお小遣い額
+  const maxAvailable = Math.max(0, Math.floor(acc.points || 0) - pendingAmount);
 
+  const maxAvailEl = document.getElementById('book-exchange-max-avail');
+  if (maxAvailEl) {
+    maxAvailEl.textContent = maxAvailable;
+  }
+
+  const inputEl = document.getElementById('book-exchange-input');
+  const rawInput = inputEl ? inputEl.value : '';
+  const parsed = parsePositiveIntegerInput(rawInput, { silent: true });
+
+  const calcLabelEl = document.getElementById('wallet-book-calc-label');
   const bookEl = document.getElementById('wallet-book-equiv');
   const bonusEl = document.getElementById('wallet-bonus-amount');
   const bonusLine = document.getElementById('wallet-bonus-line');
 
-  if (bookEl) bookEl.textContent = `${bookEquiv} 円分`;
-  if (bonusEl) bonusEl.textContent = `+${Math.max(0, bonus)}`;
-  if (bonusLine) {
-    bonusLine.style.display = bonus > 0 ? 'block' : 'none';
+  if (parsed !== null && parsed > 0) {
+    const bookEquiv = calcBookEquiv(parsed);
+    const bonus = bookEquiv - parsed;
+    if (calcLabelEl) calcLabelEl.textContent = `${parsed} pt を本にすると:`;
+    if (bookEl) bookEl.textContent = `${bookEquiv} 円分`;
+    if (bonusEl) bonusEl.textContent = `+${Math.max(0, bonus)}`;
+    if (bonusLine) {
+      bonusLine.style.display = bonus > 0 ? 'block' : 'none';
+    }
+  } else {
+    // 欄が空か不正な値のときは、いまと同じ「すべて交換すると」の表示に戻す
+    const points = acc.points || 0;
+    const bookEquiv = calcBookEquiv(points);
+    const bonus = bookEquiv - points;
+    if (calcLabelEl) calcLabelEl.textContent = 'ポイントをすべて本に交換すると:';
+    if (bookEl) bookEl.textContent = `${bookEquiv} 円分`;
+    if (bonusEl) bonusEl.textContent = `+${Math.max(0, bonus)}`;
+    if (bonusLine) {
+      bonusLine.style.display = bonus > 0 ? 'block' : 'none';
+    }
   }
 }
 
@@ -2122,7 +2265,7 @@ function completeWishlistItem(item) {
 
     // 本ポイントが十分にあれば精算（なければ記念記録）
     if ((acc.bookPoints || 0) >= item.price) {
-      acc.bookPoints -= item.price;
+      changeAccountPoints(acc, 'bookPoints', -item.price);
     }
 
     pushPointHistory(acc, {
@@ -2184,35 +2327,60 @@ function renderWalletHistory(acc) {
 function exchangeToBooks() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
-  const currentPoints = acc.points || 0;
 
-  if (currentPoints <= 0) {
-    alert('交換できるポイントがありません。クイズに挑戦してポイントをためてね！');
+  const pendingAmount = (acc.pendingCashRequest && typeof acc.pendingCashRequest.amount === 'number') ? acc.pendingCashRequest.amount : 0;
+  // 交換できる上限 ＝ Math.floor(所持ポイント) − 申請中のお小遣い額
+  const maxAvailable = Math.floor(acc.points || 0) - pendingAmount;
+
+  if (maxAvailable <= 0) {
+    if (Math.floor(acc.points || 0) > 0 && pendingAmount > 0) {
+      alert(`お小遣い申請中の分（${pendingAmount} pt）は本に交換できないよ。\n（申請をとりけすか、おうちの人の精算をお待ちください）`);
+    } else {
+      alert('交換できるポイントがありません。クイズに挑戦してポイントをためてね！');
+    }
+    return;
+  }
+
+  const inputEl = document.getElementById('book-exchange-input');
+  const rawInput = inputEl ? inputEl.value : '';
+  const inputPt = parsePositiveIntegerInput(rawInput);
+  if (inputPt === null) return;
+
+  if (inputPt > maxAvailable) {
+    if (pendingAmount > 0) {
+      alert(`交換できるのは ${maxAvailable} pt までです。（お小遣い申請中の ${pendingAmount} pt は使えないよ）`);
+    } else {
+      alert(`交換できるのは ${maxAvailable} pt までです。`);
+    }
     return;
   }
 
   openParentPinModal(() => {
-    const bookVal = calcBookEquiv(currentPoints);
+    const bookVal = calcBookEquiv(inputPt);
+    const bonus = bookVal - inputPt;
+    const remain = formatPoints((acc.points || 0) - inputPt);
     const ok = confirm(
       `【バリューブックスポイントに交換（保護者確認）】\n\n` +
       `現在の為替レート: 1ドル = ${currentFxRate}円\n` +
-      `所持ポイント ${formatPoints(currentPoints)} pt を、\n` +
+      `${inputPt} pt を、\n` +
       `👉 ${bookVal} 円分 のバリューブックスポイントに交換しますか？\n` +
-      `（現金よりも ${bookVal - currentPoints} 円分おトク！）`
+      `（現金よりも ${bonus} 円分おトク！）\n\n` +
+      `※のこりの所持ポイントは ${remain} pt になります。`
     );
 
     if (ok) {
-      acc.points = 0;
-      acc.bookPoints = (acc.bookPoints || 0) + bookVal;
+      changeAccountPoints(acc, 'points', -inputPt);
+      changeAccountPoints(acc, 'bookPoints', bookVal);
       pushPointHistory(acc, {
         type: 'book',
         title: `バリューブックスポイント交換 (${bookVal}円分)`,
-        amount: -currentPoints,
+        amount: -inputPt,
         bookAmount: bookVal,
         date: Date.now()
       });
 
       saveAccounts();
+      if (inputEl) inputEl.value = '';
       renderAccountScreen();
       openWalletScreen(currentAccountId);
       renderPortalScreen();
@@ -2225,23 +2393,63 @@ function exchangeToBooks() {
 function claimCash() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
-  const currentPoints = acc.points || 0;
 
-  if (currentPoints <= 0) {
+  // すでに申請中の場合は「申請とりけす」
+  if (acc.pendingCashRequest && typeof acc.pendingCashRequest.amount === 'number' && acc.pendingCashRequest.amount > 0) {
+    const cancelOk = confirm(
+      `【お小遣い申請の取り消し】\n\n` +
+      `現在申請中の「お小遣い ${acc.pendingCashRequest.amount} 円」の申請をとりけしますか？`
+    );
+    if (cancelOk) {
+      acc.pendingCashRequest = null;
+      saveAccounts();
+      const inputEl = document.getElementById('cash-request-input');
+      if (inputEl) inputEl.value = '';
+      openWalletScreen(currentAccountId);
+      alert('お小遣いの申請をとりけしました。');
+    }
+    return;
+  }
+
+  // 1. 使えるポイント ＝ Math.floor(所持ポイント)
+  const maxAvailable = Math.floor(acc.points || 0);
+  if (maxAvailable <= 0) {
     alert('お小遣いにできるポイントがありません。クイズをがんばってね！');
     return;
   }
 
+  // 2. I-2 の関数で入力をチェックする
+  const inputEl = document.getElementById('cash-request-input');
+  const rawInput = inputEl ? inputEl.value : '';
+  const amount = parsePositiveIntegerInput(rawInput);
+  if (amount === null) return;
+
+  // 3. 「使えるポイント」を超えていたら止めて、上限を伝える
+  if (amount > maxAvailable) {
+    alert(`つかえるポイントを超えているよ。（つかえるのは ${maxAvailable} pt までだよ）`);
+    return;
+  }
+
+  // 4. confirm で「○○ pt を つかって、お小遣い ○○ 円を もうしこみますか？ のこりは ○○ pt になるよ」と確認する
+  const remain = formatPoints((acc.points || 0) - amount);
   const ok = confirm(
     `【お小遣い申請】\n\n` +
-    `所持ポイント ${currentPoints} pt を使って、\n` +
-    `お小遣い ${currentPoints} 円 をおうちの人に申請しますか？`
+    `${amount} pt を つかって、お小遣い ${amount} 円を もうしこみますか？\n` +
+    `のこりは ${remain} pt になるよ`
   );
+  if (!ok) return;
 
-  if (ok) {
-    SoundFx.playCoin();
-    alert(`💴 おうちの人に ${currentPoints} 円のお小遣いを申請しました！\nおうちの人からお小遣いをもらったら「保護者メニュー」で精算してもらってね。`);
-  }
+  // 5. OK なら acc.pendingCashRequest = { amount: 整数, date: Date.now() } を保存する
+  acc.pendingCashRequest = {
+    amount: amount,
+    date: Date.now()
+  };
+
+  saveAccounts();
+  if (inputEl) inputEl.value = '';
+  openWalletScreen(currentAccountId);
+  SoundFx.playCoin();
+  alert(`💴 おうちの人に ${amount} 円のお小遣いを申請しました！\nおうちの人からお小遣いをもらったら「保護者メニュー」で精算してもらってね。`);
 }
 
 // =============================================
@@ -2530,22 +2738,34 @@ function parentSettleCash() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
   const currentPoints = acc.points || 0;
+  const maxAvailable = Math.floor(currentPoints);
 
-  if (currentPoints <= 0) {
-    alert('現在精算するポイントはありません。');
+  if (maxAvailable <= 0) {
+    alert('現在精算できるポイントはありません。');
     return;
   }
 
-  const input = prompt(`【お小遣い精算】\n実際に渡した金額（ポイント数）を入力してください:\n（現在の所持: ${currentPoints} pt）`, currentPoints);
+  const pending = acc.pendingCashRequest;
+  let promptMsg = '【お小遣い精算】\n';
+  let defaultVal = '';
+  if (pending && typeof pending.amount === 'number' && pending.amount > 0) {
+    promptMsg += `子どもから「${pending.amount} 円」のお小遣い申請があります。\n`;
+    defaultVal = String(pending.amount);
+  }
+  promptMsg += `実際に渡した金額（ポイント数）を入力してください:\n（精算できる上限: ${maxAvailable} pt / 現在の所持: ${formatPoints(currentPoints)} pt）`;
+
+  const input = prompt(promptMsg, defaultVal);
   if (input === null) return;
-  const amount = parseInt(input);
+  const amount = parsePositiveIntegerInput(input);
+  if (amount === null) return;
 
-  if (isNaN(amount) || amount <= 0 || amount > currentPoints) {
-    alert('正しいポイント数を入力してください。');
+  if (amount > maxAvailable) {
+    alert(`精算できる上限（${maxAvailable} pt）を超えています。`);
     return;
   }
 
-  acc.points -= amount;
+  changeAccountPoints(acc, 'points', -amount);
+  acc.pendingCashRequest = null;
   pushPointHistory(acc, {
     type: 'cash',
     title: `お小遣い精算（${amount}円支払い済み）`,
@@ -2569,16 +2789,17 @@ function parentSettleBook() {
     return;
   }
 
-  const input = prompt(`【本ポイント精算】\nバリューブックスで本を購入した金額（ポイント数）を入力してください:\n（保有本ポイント: ${currentBookPoints} 円分）`, currentBookPoints);
+  const input = prompt(`【本ポイント精算】\nバリューブックスで本を購入した金額（ポイント数）を入力してください:\n（保有本ポイント: ${currentBookPoints} 円分）`, String(currentBookPoints));
   if (input === null) return;
-  const amount = parseInt(input);
+  const amount = parsePositiveIntegerInput(input);
+  if (amount === null) return;
 
-  if (isNaN(amount) || amount <= 0 || amount > currentBookPoints) {
-    alert('正しい金額を入力してください。');
+  if (amount > currentBookPoints) {
+    alert(`使用できる本ポイントの上限（${currentBookPoints} 円分）を超えています。`);
     return;
   }
 
-  acc.bookPoints -= amount;
+  changeAccountPoints(acc, 'bookPoints', -amount);
   pushPointHistory(acc, {
     type: 'settle',
     title: `バリューブックス本購入（${amount}円分使用）`,
@@ -2599,16 +2820,12 @@ function parentAddPoints() {
 
   const input = prompt(`【ごほうびポイント追加】\n追加するポイント数を入力してください（例: 50）:`, '50');
   if (input === null) return;
-  const amount = parseInt(input);
-
-  if (isNaN(amount) || amount <= 0) {
-    alert('正しいポイント数を入力してください。');
-    return;
-  }
+  const amount = parsePositiveIntegerInput(input);
+  if (amount === null) return;
 
   const reason = prompt('理由・名目を入力してください（例: お手伝いごほうび、漢字テスト満点など）:', 'お手伝いごほうび') || 'ごほうびポイント';
 
-  acc.points = (acc.points || 0) + amount;
+  changeAccountPoints(acc, 'points', amount);
   pushPointHistory(acc, {
     type: 'earn',
     title: `🎁 ${reason}`,
@@ -5050,7 +5267,8 @@ function importDataBackup(event) {
           pendingBadgePopups: [],
           weakQuestions: Array.isArray(raw.weakQuestions) ? raw.weakQuestions : [],
           scienceHistory: (raw.scienceHistory && typeof raw.scienceHistory === 'object') ? raw.scienceHistory : {},
-          societyHistory: (raw.societyHistory && typeof raw.societyHistory === 'object') ? raw.societyHistory : {}
+          societyHistory: (raw.societyHistory && typeof raw.societyHistory === 'object') ? raw.societyHistory : {},
+          pendingCashRequest: sanitizePendingCashRequest(raw.pendingCashRequest, points)
         };
       });
 
@@ -6793,6 +7011,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 通帳画面アクション
   document.getElementById('btn-exchange-books').addEventListener('click', exchangeToBooks);
   document.getElementById('btn-claim-cash').addEventListener('click', claimCash);
+  const bookExchangeInput = document.getElementById('book-exchange-input');
+  if (bookExchangeInput) {
+    bookExchangeInput.addEventListener('input', updateWalletPreviews);
+  }
   document.getElementById('btn-parent-toggle').addEventListener('click', toggleParentPanel);
   document.getElementById('btn-parent-settle-cash').addEventListener('click', parentSettleCash);
   document.getElementById('btn-parent-settle-book').addEventListener('click', parentSettleBook);
