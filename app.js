@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v49';
-const APP_VERSION_LABEL = '🌸 ばーじょん49 🌸';
+const APP_VERSION_CODE = 'v50';
+const APP_VERSION_LABEL = '🌸 ばーじょん50 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -2189,7 +2189,7 @@ function extractFirstUrlFromText(text) {
 }
 
 /**
- * ■ K-1 & K-2. URL入力欄の更新に伴うタイトル自動抽出処理
+ * ■ K-1, K-2, K-8. URL入力欄の更新に伴うタイトル自動抽出処理
  */
 function handleWishlistUrlUpdate(urlCandidate, options = {}) {
   const urlInput = document.getElementById('wishlist-input-url');
@@ -2204,42 +2204,83 @@ function handleWishlistUrlUpdate(urlCandidate, options = {}) {
     cleanUrl = urlCandidate.trim();
   }
 
-  if (cleanUrl && urlInput.value !== cleanUrl) {
+  if (cleanUrl && urlInput && urlInput.value !== cleanUrl) {
     urlInput.value = cleanUrl;
   }
 
-  const effectiveUrl = cleanUrl || urlInput.value.trim();
+  const effectiveUrl = cleanUrl || (urlInput ? urlInput.value.trim() : '');
   const extractedTitle = extractTitleFromValuebooksUrl(effectiveUrl);
 
+  const currentTitle = titleInput ? titleInput.value.trim() : '';
+  const prevAutoTitle = (titleInput && titleInput.dataset.autoFilledTitle) ? titleInput.dataset.autoFilledTitle.trim() : '';
+
+  // タイトル欄が「空」または「前回アプリが自動で入れたタイトルのまま」なら入れかえ可能
+  const canOverwrite = (!currentTitle) || (Boolean(prevAutoTitle) && currentTitle === prevAutoTitle);
+
   if (extractedTitle) {
-    // タイトル欄にすでに子どもが何か入力しているときは上書きしない
-    if (!titleInput.value.trim()) {
-      titleInput.value = extractedTitle;
-    }
-    if (titleHint) {
-      titleHint.textContent = '✨ タイトルを自動で入れたよ！';
-      titleHint.className = 'wishlist-input-hint-msg success';
-      titleHint.style.display = 'inline-block';
+    if (canOverwrite) {
+      if (titleInput) {
+        titleInput.value = extractedTitle;
+        titleInput.dataset.autoFilledTitle = extractedTitle;
+      }
+      if (titleHint) {
+        titleHint.textContent = '✨ タイトルを自動で入れたよ！';
+        titleHint.className = 'wishlist-input-hint-msg success';
+        titleHint.style.display = 'inline-block';
+      }
+    } else {
+      // 子どもが自分で書きかえたタイトルなので上書きしない
+      // 上書きしなかったときは「✨ 自動で入れたよ」を出さないこと
+      if (titleHint) {
+        titleHint.textContent = '';
+        titleHint.style.display = 'none';
+      }
     }
   } else {
-    // タイトルが取れなかった場合
-    if (!titleInput.value.trim()) {
+    // 新しい URL からタイトルが取れなかった場合
+    if (prevAutoTitle && currentTitle === prevAutoTitle) {
+      // タイトル欄が前回の自動入力のままなら、空にして「💡 タイトルは自分で入れてね」を出す
+      if (titleInput) {
+        titleInput.value = '';
+        delete titleInput.dataset.autoFilledTitle;
+      }
       if (titleHint) {
         titleHint.textContent = '💡 タイトルは自分で入れてね';
         titleHint.className = 'wishlist-input-hint-msg note';
         titleHint.style.display = 'inline-block';
       }
+    } else if (!currentTitle) {
+      if (titleInput) {
+        delete titleInput.dataset.autoFilledTitle;
+      }
+      if (titleHint) {
+        titleHint.textContent = '💡 タイトルは自分で入れてね';
+        titleHint.className = 'wishlist-input-hint-msg note';
+        titleHint.style.display = 'inline-block';
+      }
+    } else {
+      // 子どもが自分で入力したタイトルがある場合は消さず、ヒントも不要
+      if (titleHint) {
+        titleHint.textContent = '';
+        titleHint.style.display = 'none';
+      }
     }
   }
 
-  if (options && options.focusPrice) {
-    const priceInput = document.getElementById('wishlist-input-price');
-    if (priceInput) priceInput.focus();
+  // ■ K-8. 貼りつけたあと、タイトル欄が空ならタイトル欄に、入っていれば値段欄にカーソルを移す
+  if (options && (options.focusNext || options.focusPrice)) {
+    const updatedTitle = titleInput ? titleInput.value.trim() : '';
+    if (!updatedTitle) {
+      if (titleInput) titleInput.focus();
+    } else {
+      const priceInput = document.getElementById('wishlist-input-price');
+      if (priceInput) priceInput.focus();
+    }
   }
 }
 
 /**
- * ■ K-1. 「📋 はりつける」ボタン押下ハンドラ
+ * ■ K-1 & K-8. 「📋 はりつける」ボタン押下ハンドラ
  */
 async function handlePasteWishlistUrl() {
   const urlInput = document.getElementById('wishlist-input-url');
@@ -2269,10 +2310,10 @@ async function handlePasteWishlistUrl() {
 
     const firstUrl = extractFirstUrlFromText(clipText);
     if (firstUrl) {
-      handleWishlistUrlUpdate(firstUrl, { focusPrice: true });
+      handleWishlistUrlUpdate(firstUrl, { focusNext: true });
     } else {
       urlInput.value = clipText.trim();
-      handleWishlistUrlUpdate(clipText.trim(), { focusPrice: true });
+      handleWishlistUrlUpdate(clipText.trim(), { focusNext: true });
     }
   } catch (err) {
     console.warn('Clipboard read error or permission denied:', err);
@@ -2413,9 +2454,14 @@ function toggleWishlistForm(show) {
   const shouldShow = show !== undefined ? show : !isVisible;
   panel.style.display = shouldShow ? 'block' : 'none';
 
+  const titleInput = document.getElementById('wishlist-input-title');
+  if (titleInput) {
+    delete titleInput.dataset.autoFilledTitle;
+  }
+
   if (shouldShow) {
     document.getElementById('wishlist-input-url').value = '';
-    document.getElementById('wishlist-input-title').value = '';
+    if (titleInput) titleInput.value = '';
     document.getElementById('wishlist-input-price').value = '';
     const urlHint = document.getElementById('wishlist-url-hint');
     if (urlHint) {
@@ -7253,6 +7299,16 @@ document.addEventListener('DOMContentLoaded', () => {
         inputWishlistUrl.value = firstUrl;
       }
       handleWishlistUrlUpdate(inputWishlistUrl.value.trim());
+    });
+    inputWishlistUrl.addEventListener('paste', () => {
+      setTimeout(() => {
+        const val = inputWishlistUrl.value.trim();
+        const firstUrl = extractFirstUrlFromText(val);
+        if (firstUrl && firstUrl !== val && val.includes(' ')) {
+          inputWishlistUrl.value = firstUrl;
+        }
+        handleWishlistUrlUpdate(inputWishlistUrl.value.trim(), { focusNext: true });
+      }, 0);
     });
   }
 
