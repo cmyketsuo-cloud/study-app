@@ -2409,6 +2409,28 @@ body {
   z-index: 1;
 }
 
+.btn-pop-small-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  color: var(--color-text);
+  font-family: var(--font-rounded);
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-pop-small-ghost:hover {
+    background: #e2e8f0;
+  }
+}
+
 .portal-header {
   display: flex;
   flex-direction: column;
@@ -2428,6 +2450,13 @@ body {
   justify-content: space-between;
   gap: 1rem;
   width: 100%;
+}
+
+/* 画面右上固定の🔊ボタン（width:44px + right:1rem）との重なり防止（iPad縦向き・1024px対応） */
+@media (max-width: 1080px) {
+  .portal-header-top {
+    padding-right: 3.75rem;
+  }
 }
 
 .portal-header .portal-account-badge {
