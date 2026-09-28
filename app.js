@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v48';
-const APP_VERSION_LABEL = '🌸 ばーじょん48 🌸';
+const APP_VERSION_CODE = 'v49';
+const APP_VERSION_LABEL = '🌸 ばーじょん49 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -1515,7 +1515,7 @@ function renderPortalScreen() {
   const banner = document.getElementById('portal-wishlist-banner');
   if (wishlist.length > 0) {
     const targetBook = wishlist[0];
-    const totalBookFunds = (acc.bookPoints || 0) + calcBookEquiv(acc.points || 0);
+    const totalBookFunds = (acc.bookPoints || 0) + calcBookEquiv(getExchangeablePoints(acc));
     const pct = Math.min(100, Math.floor((totalBookFunds / targetBook.price) * 100));
     const remain = Math.max(0, targetBook.price - totalBookFunds);
 
@@ -2124,6 +2124,193 @@ function updateWalletPreviews() {
 // =============================================
 //  WISHLIST (ほしい本メモ) LOGIC
 // =============================================
+
+/**
+ * ■ K-2. バリューブックスのURLからタイトルを取り出す関数
+ * 例: https://www.valuebooks.jp/%E3%81%B5%E3%81%97...-9/bp/VS0052522219
+ * -> 「ふしぎ駄菓子屋銭天堂 9」
+ */
+function extractTitleFromValuebooksUrl(urlString) {
+  if (!urlString || typeof urlString !== 'string') return null;
+  try {
+    const trimmed = urlString.trim();
+    const urlMatch = trimmed.match(/https?:\/\/[^\s]+/i);
+    const targetUrl = urlMatch ? urlMatch[0] : trimmed;
+
+    let parsed;
+    try {
+      parsed = new URL(targetUrl);
+    } catch (e) {
+      return null;
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 'valuebooks.jp' && host !== 'www.valuebooks.jp') {
+      return null;
+    }
+
+    // パスを解析: /<タイトル部分>/bp/<ID>
+    const pathParts = parsed.pathname.split('/').filter(p => p.length > 0);
+    // pathParts: [タイトル部分, 'bp', ID, ...]
+    if (pathParts.length < 3 || pathParts[1] !== 'bp') {
+      return null;
+    }
+
+    const rawTitlePart = pathParts[0];
+    if (!rawTitlePart || rawTitlePart === 'bp') {
+      return null;
+    }
+
+    let decoded;
+    try {
+      decoded = decodeURIComponent(rawTitlePart);
+    } catch (e) {
+      return null;
+    }
+
+    // 「-」を半角スペースに置きかえ、前後の空白を取る
+    const cleaned = decoded.replace(/-/g, ' ').trim();
+    if (!cleaned) return null;
+
+    // 100文字を超えたら100文字で切る
+    return cleaned.slice(0, 100);
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * テキストから最初の http(s):// URL を抽出
+ */
+function extractFirstUrlFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+  const match = text.match(/https?:\/\/[^\s]+/i);
+  return match ? match[0] : null;
+}
+
+/**
+ * ■ K-1 & K-2. URL入力欄の更新に伴うタイトル自動抽出処理
+ */
+function handleWishlistUrlUpdate(urlCandidate, options = {}) {
+  const urlInput = document.getElementById('wishlist-input-url');
+  const titleInput = document.getElementById('wishlist-input-title');
+  const titleHint = document.getElementById('wishlist-title-hint');
+  const urlHint = document.getElementById('wishlist-url-hint');
+
+  if (urlHint) urlHint.style.display = 'none';
+
+  let cleanUrl = extractFirstUrlFromText(urlCandidate);
+  if (!cleanUrl && isValidHttpUrl(urlCandidate.trim())) {
+    cleanUrl = urlCandidate.trim();
+  }
+
+  if (cleanUrl && urlInput.value !== cleanUrl) {
+    urlInput.value = cleanUrl;
+  }
+
+  const effectiveUrl = cleanUrl || urlInput.value.trim();
+  const extractedTitle = extractTitleFromValuebooksUrl(effectiveUrl);
+
+  if (extractedTitle) {
+    // タイトル欄にすでに子どもが何か入力しているときは上書きしない
+    if (!titleInput.value.trim()) {
+      titleInput.value = extractedTitle;
+    }
+    if (titleHint) {
+      titleHint.textContent = '✨ タイトルを自動で入れたよ！';
+      titleHint.className = 'wishlist-input-hint-msg success';
+      titleHint.style.display = 'inline-block';
+    }
+  } else {
+    // タイトルが取れなかった場合
+    if (!titleInput.value.trim()) {
+      if (titleHint) {
+        titleHint.textContent = '💡 タイトルは自分で入れてね';
+        titleHint.className = 'wishlist-input-hint-msg note';
+        titleHint.style.display = 'inline-block';
+      }
+    }
+  }
+
+  if (options && options.focusPrice) {
+    const priceInput = document.getElementById('wishlist-input-price');
+    if (priceInput) priceInput.focus();
+  }
+}
+
+/**
+ * ■ K-1. 「📋 はりつける」ボタン押下ハンドラ
+ */
+async function handlePasteWishlistUrl() {
+  const urlInput = document.getElementById('wishlist-input-url');
+  const urlHint = document.getElementById('wishlist-url-hint');
+
+  if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
+    urlInput.focus();
+    if (urlHint) {
+      urlHint.textContent = '💡 ここを長押しして「ペースト」してね';
+      urlHint.className = 'wishlist-input-hint-msg note';
+      urlHint.style.display = 'inline-block';
+    }
+    return;
+  }
+
+  try {
+    const clipText = await navigator.clipboard.readText();
+    if (!clipText || !clipText.trim()) {
+      urlInput.focus();
+      if (urlHint) {
+        urlHint.textContent = '💡 ここを長押しして「ペースト」してね';
+        urlHint.className = 'wishlist-input-hint-msg note';
+        urlHint.style.display = 'inline-block';
+      }
+      return;
+    }
+
+    const firstUrl = extractFirstUrlFromText(clipText);
+    if (firstUrl) {
+      handleWishlistUrlUpdate(firstUrl, { focusPrice: true });
+    } else {
+      urlInput.value = clipText.trim();
+      handleWishlistUrlUpdate(clipText.trim(), { focusPrice: true });
+    }
+  } catch (err) {
+    console.warn('Clipboard read error or permission denied:', err);
+    urlInput.focus();
+    if (urlHint) {
+      urlHint.textContent = '💡 ここを長押しして「ペースト」してね';
+      urlHint.className = 'wishlist-input-hint-msg note';
+      urlHint.style.display = 'inline-block';
+    }
+  }
+}
+
+/**
+ * ■ K-3. 登録した値段を直す関数
+ */
+function editWishlistItemPrice(item) {
+  const acc = accounts[currentAccountId];
+  if (!acc || !item) return;
+
+  const currentPrice = item.price;
+  const rawInput = prompt(`「${item.title}」の あたらしいお値段（円）を 入れてね：`, currentPrice);
+  if (rawInput === null) {
+    return; // キャンセルなら何もしない
+  }
+
+  const newPrice = parsePositiveIntegerInput(rawInput);
+  if (newPrice === null) {
+    return;
+  }
+
+  item.price = newPrice;
+  item.priceUpdatedAt = Date.now();
+
+  saveAccounts();
+  renderWishlist(acc);
+  renderPortalScreen();
+}
+
 function renderWishlist(acc) {
   const container = document.getElementById('wishlist-items-container');
   if (!container) return;
@@ -2156,11 +2343,23 @@ function renderWishlist(acc) {
       ? `<a href="${encodeURI(item.url)}" target="_blank" rel="noopener noreferrer" class="btn-pop-link-small"><span>🛒</span> 本を見に行く ↗</a>`
       : '';
 
+    // ■ K-4. 「いつの値段か」を表示する（priceUpdatedAt、なければ createdAt）
+    const dateVal = item.priceUpdatedAt || item.createdAt;
+    let dateLabel = '';
+    if (dateVal) {
+      const d = new Date(dateVal);
+      dateLabel = `（${d.getMonth() + 1}/${d.getDate()} の値段）`;
+    }
+
     card.innerHTML = `
       <div class="wishlist-item-top">
         <div class="wishlist-item-title-wrap">
           <div class="wishlist-item-title">📖 ${safeTitle}</div>
-          <div class="wishlist-item-price">目標価格: ${item.price} 円</div>
+          <div class="wishlist-item-price-row">
+            <span class="wishlist-item-price">目標価格: ${item.price} 円</span>
+            <button type="button" class="btn-wishlist-edit-price" data-id="${item.id}" title="お値段をなおす">✏️ 値段をなおす</button>
+          </div>
+          ${dateLabel ? `<div class="wishlist-item-price-date">${dateLabel}</div>` : ''}
         </div>
         <div class="wishlist-item-actions-top">
           <button class="btn-icon-danger" data-id="${item.id}" aria-label="削除" title="削除">🗑</button>
@@ -2178,12 +2377,20 @@ function renderWishlist(acc) {
       </div>
 
       <div class="wishlist-item-bottom-actions">
-        ${urlBtnHtml}
+        <div class="wishlist-link-wrap">
+          ${urlBtnHtml}
+          ${isValidUrl ? '<span class="wishlist-used-book-note">中古本なので、売り切れたり値段が変わったりするよ</span>' : ''}
+        </div>
         <button class="btn-pop-bought" data-id="${item.id}">
           <span>🎉</span> 買ってもらった！
         </button>
       </div>
     `;
+
+    // 値段をなおすイベント (K-3)
+    card.querySelector('.btn-wishlist-edit-price').addEventListener('click', () => {
+      editWishlistItemPrice(item);
+    });
 
     // 削除イベント
     card.querySelector('.btn-icon-danger').addEventListener('click', () => {
@@ -2207,10 +2414,20 @@ function toggleWishlistForm(show) {
   panel.style.display = shouldShow ? 'block' : 'none';
 
   if (shouldShow) {
+    document.getElementById('wishlist-input-url').value = '';
     document.getElementById('wishlist-input-title').value = '';
     document.getElementById('wishlist-input-price').value = '';
-    document.getElementById('wishlist-input-url').value = '';
-    document.getElementById('wishlist-input-title').focus();
+    const urlHint = document.getElementById('wishlist-url-hint');
+    if (urlHint) {
+      urlHint.textContent = '';
+      urlHint.style.display = 'none';
+    }
+    const titleHint = document.getElementById('wishlist-title-hint');
+    if (titleHint) {
+      titleHint.textContent = '';
+      titleHint.style.display = 'none';
+    }
+    document.getElementById('wishlist-input-url').focus();
   }
 }
 
@@ -2218,17 +2435,19 @@ function saveWishlistItem() {
   const acc = accounts[currentAccountId];
   if (!acc) return;
 
-  const title = document.getElementById('wishlist-input-title').value.trim();
-  const price = parseInt(document.getElementById('wishlist-input-price').value);
   const rawUrl = document.getElementById('wishlist-input-url').value.trim();
+  const title = document.getElementById('wishlist-input-title').value.trim();
+  const rawPrice = document.getElementById('wishlist-input-price').value;
 
   if (!title) {
     alert('本のなまえ（タイトル）を入力してください。');
     document.getElementById('wishlist-input-title').focus();
     return;
   }
-  if (isNaN(price) || price <= 0) {
-    alert('正しいお値段を入力してください。');
+
+  // ■ K-1. parsePositiveIntegerInput で値段をチェック
+  const price = parsePositiveIntegerInput(rawPrice);
+  if (price === null) {
     document.getElementById('wishlist-input-price').focus();
     return;
   }
@@ -2239,13 +2458,15 @@ function saveWishlistItem() {
     return;
   }
 
+  const now = Date.now();
   if (!acc.wishlist) acc.wishlist = [];
   acc.wishlist.push({
-    id: 'w_' + Date.now(),
+    id: 'w_' + now,
     title,
     price,
     url: rawUrl ? rawUrl : null,
-    createdAt: Date.now()
+    createdAt: now,
+    priceUpdatedAt: now // ■ K-5. priceUpdatedAt を追加
   });
 
   saveAccounts();
@@ -5237,13 +5458,18 @@ function importDataBackup(event) {
         // ウィッシュリストの検証・サニタイズ（無効URLや不正型を排除）
         const cleanWishlist = Array.isArray(raw.wishlist)
           ? raw.wishlist.filter(w => w && typeof w.title === 'string' && w.title.trim().length > 0 && typeof w.price === 'number' && w.price > 0)
-              .map(w => ({
-                id: (typeof w.id === 'string' && w.id) ? w.id : ('w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
-                title: w.title.trim(),
-                price: Math.max(1, Math.floor(w.price)),
-                url: (typeof w.url === 'string' && isValidHttpUrl(w.url)) ? w.url.trim() : null,
-                createdAt: (typeof w.createdAt === 'number') ? w.createdAt : Date.now()
-              }))
+              .map(w => {
+                const createdAt = (typeof w.createdAt === 'number') ? w.createdAt : Date.now();
+                const priceUpdatedAt = (typeof w.priceUpdatedAt === 'number') ? w.priceUpdatedAt : createdAt;
+                return {
+                  id: (typeof w.id === 'string' && w.id) ? w.id : ('w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+                  title: w.title.trim(),
+                  price: Math.max(1, Math.floor(w.price)),
+                  url: (typeof w.url === 'string' && isValidHttpUrl(w.url)) ? w.url.trim() : null,
+                  createdAt: createdAt,
+                  priceUpdatedAt: priceUpdatedAt
+                };
+              })
           : [];
 
         // ポイント履歴の検証・サニタイズ
@@ -7014,6 +7240,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-toggle-add-wishlist').addEventListener('click', () => toggleWishlistForm());
   document.getElementById('btn-save-wishlist-item').addEventListener('click', saveWishlistItem);
   document.getElementById('btn-cancel-wishlist-item').addEventListener('click', () => toggleWishlistForm(false));
+  const btnPasteWishlist = document.getElementById('btn-wishlist-paste-url');
+  if (btnPasteWishlist) {
+    btnPasteWishlist.addEventListener('click', handlePasteWishlistUrl);
+  }
+  const inputWishlistUrl = document.getElementById('wishlist-input-url');
+  if (inputWishlistUrl) {
+    inputWishlistUrl.addEventListener('input', () => {
+      const val = inputWishlistUrl.value.trim();
+      const firstUrl = extractFirstUrlFromText(val);
+      if (firstUrl && firstUrl !== val && val.includes(' ')) {
+        inputWishlistUrl.value = firstUrl;
+      }
+      handleWishlistUrlUpdate(inputWishlistUrl.value.trim());
+    });
+  }
 
   // PIN入力モーダル イベント
   document.querySelectorAll('.pin-key-btn[data-key]').forEach(btn => {

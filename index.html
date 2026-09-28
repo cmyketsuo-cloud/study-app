@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん48 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん49 🌸</span>
       </div>
     </div>
   </div>
@@ -435,7 +435,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん48 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん49 🌸</span>
       </div>
     </div>
   </div>
@@ -1526,20 +1526,32 @@
 
           <!-- ほしい本追加フォーム（開閉式） -->
           <div id="wishlist-form-panel" class="wishlist-form-panel" style="display:none;">
+            <!-- 1. URL欄 -->
+            <div class="form-group">
+              <label for="wishlist-input-url">バリューブックスのURL（リンク）</label>
+              <div class="wishlist-url-input-wrap">
+                <input type="url" id="wishlist-input-url" class="form-input pop-input" placeholder="https://www.valuebooks.jp/bp/...">
+                <button type="button" id="btn-wishlist-paste-url" class="btn-pop-small-ghost btn-wishlist-paste" title="クリップボードからはりつけ">
+                  <span>📋</span> はりつける
+                </button>
+              </div>
+              <p class="wishlist-input-guide">バリューブックスで本を開いて、共有ボタン →『コピー』→ ここにはりつけ</p>
+              <div id="wishlist-url-hint" class="wishlist-input-hint-msg" style="display:none;"></div>
+            </div>
+
+            <!-- 2. タイトル欄 -->
             <div class="form-group">
               <label for="wishlist-input-title">本のなまえ（タイトル）<span class="req" style="color:var(--color-danger);">*</span></label>
               <input type="text" id="wishlist-input-title" class="form-input pop-input" placeholder="例: 銭天堂、サバイバルシリーズなど">
+              <div id="wishlist-title-hint" class="wishlist-input-hint-msg" style="display:none;"></div>
             </div>
-            <div class="form-group-row">
-              <div class="form-group" style="flex:1;">
-                <label for="wishlist-input-price">お値段（円）<span class="req" style="color:var(--color-danger);">*</span></label>
-                <input type="number" id="wishlist-input-price" class="form-input pop-input" placeholder="例: 480" min="50" max="10000">
-              </div>
-              <div class="form-group" style="flex:2;">
-                <label for="wishlist-input-url">バリューブックスのURL（リンク）</label>
-                <input type="url" id="wishlist-input-url" class="form-input pop-input" placeholder="https://www.valuebooks.jp/bp/...">
-              </div>
+
+            <!-- 3. お値段欄 -->
+            <div class="form-group">
+              <label for="wishlist-input-price">お値段（円）<span class="req" style="color:var(--color-danger);">*</span></label>
+              <input type="text" inputmode="numeric" id="wishlist-input-price" class="form-input pop-input" placeholder="例: 480">
             </div>
+
             <div class="wishlist-form-actions">
               <button id="btn-save-wishlist-item" class="btn-pop-primary">
                 <span>📌</span> リストに追加する！
@@ -1998,13 +2010,13 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260928_v48"></script>
-  <script src="writing_data.js?v=20260928_v48"></script>
-  <script src="math_data.js?v=20260928_v48"></script>
-  <script src="typing_data.js?v=20260928_v48"></script>
-  <script src="kana_data.js?v=20260928_v48"></script>
-  <script src="science_data.js?v=20260928_v48"></script>
-  <script src="society_data.js?v=20260928_v48"></script>
-  <script src="app.js?v=20260928_v48"></script>
+  <script src="quiz_data.js?v=20260928_v49"></script>
+  <script src="writing_data.js?v=20260928_v49"></script>
+  <script src="math_data.js?v=20260928_v49"></script>
+  <script src="typing_data.js?v=20260928_v49"></script>
+  <script src="kana_data.js?v=20260928_v49"></script>
+  <script src="science_data.js?v=20260928_v49"></script>
+  <script src="society_data.js?v=20260928_v49"></script>
+  <script src="app.js?v=20260928_v49"></script>
 </body>
 </html>

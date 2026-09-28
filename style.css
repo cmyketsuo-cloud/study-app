@@ -3070,6 +3070,52 @@ body {
   gap: 0.75rem;
 }
 
+.wishlist-url-input-wrap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.wishlist-url-input-wrap .form-input {
+  flex: 1;
+}
+
+.btn-wishlist-paste {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+}
+
+.wishlist-input-guide {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.wishlist-input-hint-msg {
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-top: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.wishlist-input-hint-msg.note {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.wishlist-input-hint-msg.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
 .form-group-row {
   display: flex;
   gap: 0.75rem;
@@ -3126,19 +3172,61 @@ body {
 .wishlist-item-title-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .wishlist-item-title {
   font-size: 1.05rem;
   font-weight: 900;
   color: var(--color-text);
+  line-height: 1.35;
+}
+
+.wishlist-item-price-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
 }
 
 .wishlist-item-price {
   font-size: 0.85rem;
   font-weight: 800;
   color: #92400e;
+}
+
+.btn-wishlist-edit-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-rounded);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-wishlist-edit-price:hover {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+  }
+}
+.btn-wishlist-edit-price:active {
+  transform: scale(0.96);
+}
+
+.wishlist-item-price-date {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
 }
 
 .wishlist-item-actions-top {
@@ -3188,10 +3276,25 @@ body {
 
 .wishlist-item-bottom-actions {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-top: 0.25rem;
   flex-wrap: wrap;
+}
+
+.wishlist-link-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+
+.wishlist-used-book-note {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #d97706;
+  line-height: 1.3;
 }
 
 .btn-pop-link-small {
