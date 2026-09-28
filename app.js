@@ -6,8 +6,8 @@
 // =============================================
 //  🌸 APP VERSION DEFINITION (v42)
 // =============================================
-const APP_VERSION_CODE = 'v46';
-const APP_VERSION_LABEL = '🌸 ばーじょん46 🌸';
+const APP_VERSION_CODE = 'v47';
+const APP_VERSION_LABEL = '🌸 ばーじょん47 🌸';
 
 function initVersionBadges() {
   const badges = document.querySelectorAll('.cute-version-badge');
@@ -7067,10 +7067,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const streakBadge = document.getElementById('portal-streak-badge');
   if (streakBadge) {
     streakBadge.addEventListener('click', () => openStudyCalendarModal(currentAccountId));
-  }
-  const btnPortalCal = document.getElementById('btn-portal-calendar');
-  if (btnPortalCal) {
-    btnPortalCal.addEventListener('click', () => openStudyCalendarModal(currentAccountId));
   }
   const btnCalClose = document.getElementById('btn-calendar-close');
   if (btnCalClose) {

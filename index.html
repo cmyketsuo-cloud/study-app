@@ -70,7 +70,7 @@
 
       <div class="pop-bottom-note">
         <span>💡 まちがえた問題を自動でおぼえて、重点的に出題するよ！</span>
-        <span class="cute-version-badge">🌸 ばーじょん46 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん47 🌸</span>
       </div>
     </div>
   </div>
@@ -199,42 +199,49 @@
   <!-- ========== PORTAL SCREEN (総合学習ポータル・科目選択) ========== -->
   <div id="screen-portal" class="screen">
     <div class="portal-wrap">
-      <!-- ポータルヘッダー -->
+      <!-- ポータルヘッダー（2段構成） -->
       <header class="portal-header pop-glass">
-        <button id="btn-open-guide-portal" class="btn-pop-small-guide" title="あそびかたを見る">
-          <span>🦉</span> あそびかた
-        </button>
-        <button id="btn-portal-change-account" class="btn-pop-small" aria-label="アカウントをきりかえる">
-          <span>👤</span> アカウント切替
-        </button>
-        <div class="portal-account-badge">
-          <span class="portal-avatar-letter" id="portal-avatar-letter">た</span>
-          <div class="portal-name-wrap">
-            <span class="portal-account-name" id="portal-account-name">たろう</span>
-            <span class="portal-equipped-title" id="portal-equipped-title" style="display:none;">🌟 はじめの一歩</span>
+        <!-- 1段目: だれ？ いくら？ -->
+        <div class="portal-header-top">
+          <div class="portal-account-badge">
+            <span class="portal-avatar-letter" id="portal-avatar-letter">た</span>
+            <div class="portal-name-wrap">
+              <span class="portal-account-name" id="portal-account-name">たろう</span>
+              <span class="portal-equipped-title" id="portal-equipped-title" style="display:none;">🌟 はじめの一歩</span>
+            </div>
+            <span class="portal-grade-pill" id="portal-grade-pill">5年生</span>
           </div>
-          <span class="portal-grade-pill" id="portal-grade-pill">5年生</span>
+          <button id="btn-portal-open-wallet" class="btn-wallet-open portal-wallet-btn" title="通帳・ポイント詳細を見る">
+            <span class="wallet-coin-icon">🪙</span>
+            <span class="wallet-points-num" id="portal-points-display">0</span>
+            <span class="wallet-unit-text">pt ↗</span>
+          </button>
         </div>
-        <!-- 📖 全問ふりがな（ルビ）トグルボタン -->
-        <button id="btn-toggle-furigana" class="btn-toggle-furigana" title="すべての漢字にふりがな（ルビ）をつける">
-          <span>📖</span> <span id="furigana-toggle-text">ふりがな: ON</span>
-        </button>
-        <!-- 🏆 バッジコレクションボタン -->
-        <button id="btn-portal-badges" class="btn-portal-badges" title="称号・バッジコレクションを見る">
-          <span>🏆</span> バッジ <strong id="portal-badge-count">0/18</strong>
-        </button>
-        <!-- 🔥 連続ログイン（ストリーク）バッジ -->
-        <button id="portal-streak-badge" class="portal-streak-badge" title="がんばりカレンダーを見る">
-          <span class="streak-flame">🔥</span>
-          <span class="streak-text">れんぞく <strong id="portal-streak-count">1</strong> 日目！</span>
-        </button>
-        <!-- 📅 スタンプ帳ボタン -->
-        <button id="btn-portal-calendar" class="btn-portal-calendar" title="学習カレンダーを見る">
-          <span>📅</span> スタンプ帳
-        </button>
-        <button id="btn-portal-open-wallet" class="btn-wallet-open">
-          <span>🪙</span> <span id="portal-points-display">0</span> pt ↗
-        </button>
+
+        <!-- 2段目: ボタン列（5等分タイル） -->
+        <div class="portal-header-actions">
+          <button id="btn-open-guide-portal" class="portal-action-tile btn-tile-guide" title="あそびかたを見る">
+            <span class="tile-icon">🦉</span>
+            <span class="tile-label">あそびかた</span>
+          </button>
+          <button id="btn-portal-change-account" class="portal-action-tile btn-tile-account" aria-label="アカウントをきりかえる" title="アカウントをきりかえる">
+            <span class="tile-icon">👤</span>
+            <span class="tile-label">きりかえ</span>
+          </button>
+          <button id="btn-toggle-furigana" class="portal-action-tile btn-toggle-furigana btn-tile-furigana" title="すべての漢字にふりがな（ルビ）をつける">
+            <span class="tile-icon">📖</span>
+            <span class="tile-label" id="furigana-toggle-text">ふりがな: ON</span>
+          </button>
+          <button id="btn-portal-badges" class="portal-action-tile btn-portal-badges btn-tile-badge" title="称号・バッジコレクションを見る">
+            <span class="tile-icon">🏆</span>
+            <span class="tile-label">バッジ <strong id="portal-badge-count">0/18</strong></span>
+          </button>
+          <button id="portal-streak-badge" class="portal-action-tile portal-streak-badge btn-tile-calendar" title="学習カレンダーを見る">
+            <span class="tile-icon">📅</span>
+            <span class="tile-label">スタンプ帳</span>
+            <span class="tile-sub-streak">🔥 れんぞく <strong id="portal-streak-count">1</strong>日</span>
+          </button>
+        </div>
       </header>
 
       <!-- ウィッシュリスト・目標バナー（登録中のほしい本があれば表示） -->
@@ -428,7 +435,7 @@
       </div>
 
       <div class="portal-footer">
-        <span class="cute-version-badge">🌸 ばーじょん46 🌸</span>
+        <span class="cute-version-badge">🌸 ばーじょん47 🌸</span>
       </div>
     </div>
   </div>
@@ -1991,13 +1998,13 @@
     </div>
   </div>
 
-  <script src="quiz_data.js?v=20260928_v46"></script>
-  <script src="writing_data.js?v=20260928_v46"></script>
-  <script src="math_data.js?v=20260928_v46"></script>
-  <script src="typing_data.js?v=20260928_v46"></script>
-  <script src="kana_data.js?v=20260928_v46"></script>
-  <script src="science_data.js?v=20260928_v46"></script>
-  <script src="society_data.js?v=20260928_v46"></script>
-  <script src="app.js?v=20260928_v46"></script>
+  <script src="quiz_data.js?v=20260928_v47"></script>
+  <script src="writing_data.js?v=20260928_v47"></script>
+  <script src="math_data.js?v=20260928_v47"></script>
+  <script src="typing_data.js?v=20260928_v47"></script>
+  <script src="kana_data.js?v=20260928_v47"></script>
+  <script src="science_data.js?v=20260928_v47"></script>
+  <script src="society_data.js?v=20260928_v47"></script>
+  <script src="app.js?v=20260928_v47"></script>
 </body>
 </html>
